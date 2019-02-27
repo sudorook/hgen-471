@@ -6,9 +6,79 @@ output: pdf_document
 
 # Homework 7
 
+## Problem 1
+We are deriving a new test for pathway (SNP set) analysis. Suppose a pathway is
+assigned $n$ SNPs, with p-values $p_1 , \hdots , p_n$. Our test is based on
+one-sided $Z$-scores of these SNPs, $Z_1 , \hdots, Z_n$. The test statistic is
+$Z = \sum_{i=1}^n Z_i$.
+
+### (a)
+Suppose the SNPs are all independent (not in LD), what is the null distribution
+of $Z$?
+
+### (b)
+Now suppose the first two SNPs are in perfect LD, what is the null distribution
+of $Z$?
+
+### (c)
+Suppose we have a pathway of $10$ SNPs, $p_1 = p 2 = 0.01$, $p_3 = p_4 = p_5 =
+0.2$ and $p_6 = \hdots = p_10 = 0.75$. What is the p-value at the pathway
+level in the two scenarios above? Under which scenario, the pathway is more
+significant, and why?
+
+### (d)
+A related test is $T = \sum_i Z_i^2$. What is the null distribution of this
+test? And compare the two methods, using $Z$ or $Z^2$ , which one do you
+prefer, and why?
+
+
+## Problem 2
+In this problem, you will compare genetics of two traits using the polygenic
+risk score approach we discussed in the class. You are given the genotype and
+phenotype data of two traits. For simplicity, the data has only 4 SNPs, and
+they are considered to be independent.
+
+## (a)
+Calculate the effect size of all SNPs in trait 1.
+
+## (b)
+Using the estimated effect sizes, compute polygenic risk score (PRS) of trait 1
+in the samples of trait 2 (i.e. we predict the trait 1 phenotype in these
+samples).
+
+## (c)
+Compute the correlation of the PRS with the phenotypes of trait 2.
+
+
+## Problem 3
+We will answer some conceptual questions about annotating functions of SNPs:
+
+## (a)
+Evolutionary constraint across species (e.g. PhastCons or GERP) is often used
+to define functional sequences. For a researcher studying human cognitive
+trait, what do you think is the limitation of using this annotation?
+
+## (b)
+Suppose we have a large number of whole-genome sequences of human, can you use
+this dataset to improve annotation of functional non-coding sequences? You just
+need to explain some general ideas.
+
+## (c)
+We have enhancer data (e.g. ATAC-seq) in a tissue related to disease of
+interest. In addition, we have a list of transcription factors (TFs) likely
+important in this tissue from prior studies and we know the motifs of all these
+TFs. Can you propose a better annotation combining enhancer data with TF
+information? (Hint: most variants, even within an enhancer, are likely not
+functional.)
+
+## (d)
+Now suppose we also have experimental data that identified several thousand of
+SNPs with likely regulatory effects (e.g. from large-scale reporter assay). Can
+you use this dataset to provide an even better functional annotation? (Hint:
+use Supervised Learning.)
+
 
 # Lab 6
-
 
 ## Problem 1
 
@@ -129,14 +199,14 @@ the **run_correlation.R** script limits the number of genes we're doing
 correlations on? How many genes are we observing correlations for in this lab?*
 
 
-```{r}
+```{r,eval=F}
 filter (V3=='gene') %>% filter(V1 != 'chrX' & V1 != 'chrY' & V1 != 'chrM') %>%
 ```
 
 Filter the data so that only genes that are not in the X, Y, or mitochondrial
 chromosomes are considered. Then,
 
-```{r}
+```{r,eval=F}
 genes <- unique(joined$gene_symbol)[1:18]
 ```
 
