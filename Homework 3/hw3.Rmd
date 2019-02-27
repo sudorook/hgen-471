@@ -1,0 +1,664 @@
+---
+title: "Homework 3"
+author: "Ansel George"
+output:
+  pdf_document:
+    fig_caption: yes
+---
+
+```{r}
+library(ggplot2)
+set.seed(10)
+```
+
+# Problem Set 3
+
+## Problem 1
+**We are designing a HMM to recognize repeats in a DNA sequence. A repeat is
+the sequence of form $(A)_n$, where n is some integer. The average length of a
+repeat is 10. While a repeat mostly has base A's, it occasionally has base T’s,
+with probability 0.05. In the non-repeat regions, the nuclotide frequencies are
+uniform (i.e. 1/4 for each base), and on average we have one repeat every 50 bp
+of non-repeat regions.**
+
+
+### (a)
+**Design a HMM that can recognize repeats in a sequence. Give the emission and
+transition probabilities of this HMM (Hint: the length of a sequence block
+(i.e. continuous sequence generated from a single state), follows the geometric
+distribution).**
+
+The average length of a repeat is 10 base pairs, and the expectation of a
+geometric distribution is the reciprocal of the expectation. Therefore, the
+geometrically-distributed probability $P(\textrm{leave repeat}) = \frac{1}{10}
+= .1$. The same reasoning can be used to determine that $P(\textrm{leave
+non-repeat}) = \frac{1}{50} = .02$.
+
+
+Transition probabilities ($a_{ji}$):
+
+|      | R   | NR  | 
+| :--: | :-: | :-: | 
+| R    | .9  | .1  | 
+| NR   | .02 | .98 | 
+
+Emission probabilities ($b_{j}(k)$):
+
+|      | R   | NR  | 
+| :--: | :-: | :-: | 
+| A    | .95 | .25 | 
+| C    | 0   | .25 | 
+| T    | .05 | .25 | 
+| G    | 0   | .25 | 
+
+
+### (b) 
+**Given a simple sequence x = CGAAA, what is the most likely state path? You
+don’t have to solve it with the rigorous Viterbi algorithm.**
+
+Given that C and G can only be found in non-repeat regions, the possible state
+paths are:
+
+$NR, NR, R, R, R$
+
+$NR, NR, NR, R, R$
+
+$NR, NR, NR, NR, R$
+
+$NR, NR, NR, NR, NR$
+
+\begin{align}
+P(NR, NR, R, R, R | G) &= P(\textrm{C}|\textrm{NR}_{1})
+  P(\textrm{NR}_2|\textrm{NR}_1) P(\textrm{G}|\textrm{NR}_2) \\
+  &P(\textrm{R}_3|\textrm{NR}_2) P(\textrm{A}|\textrm{R}_3)
+  P(\textrm{R}_4|\textrm{R}_3) P(\textrm{A}|\textrm{R}_4)
+  P(\textrm{R}_5|\textrm{R}_4) P(\textrm{A}|\textrm{R}_5) \\
+&=(.25) (.98 * .25) (.02 * .95) (.9 * .95) (.9 * .95) \\
+&= 0.0008507303
+\end{align}
+
+\begin{align}
+P(NR, NR, NR, R, R | G) &= P(\textrm{C}|\textrm{NR}_{1})
+  P(\textrm{NR}_2|\textrm{NR}_1) P(\textrm{G}|\textrm{NR}_2) \\
+  &   P(\textrm{NR}_3|\textrm{NR}_2) P(\textrm{A}|\textrm{NR}_3)
+  P(\textrm{R}_4|\textrm{NR}_3) P(\textrm{A}|\textrm{R}_4)
+  P(\textrm{R}_5|\textrm{R}_4) P(\textrm{A}|\textrm{R}_5) \\
+&= (.25) (.98 * .25) (.98 * .25) (.02 * .95) (.9 * .95) \\
+&= 0.0002437765
+\end{align}
+
+\begin{align}
+P(NR, NR, NR, NR, R | G) &= P(\textrm{C}|\textrm{NR}_{1})
+  P(\textrm{NR}_2|\textrm{NR}_1) P(\textrm{G}|\textrm{NR}_2) \\
+  &P(\textrm{NR}_3|\textrm{NR}_2) P(\textrm{A}|\textrm{NR}_3)
+  P(\textrm{NR}_4|\textrm{NR}_3) P(\textrm{A}|\textrm{NR}_4)
+  P(\textrm{R}_5|\textrm{NR}_4) P(\textrm{A}|\textrm{R}_5) \\
+&= (.25) (.98 * .25) (.98 * .25) (.98 * .25) (.02 * .95) \\
+&= 6.985409e-05
+\end{align}
+
+\begin{align}
+P(NR, NR, NR, NR, NR | G) &= P(\textrm{C}|\textrm{NR}_{1})
+  P(\textrm{NR}_2|\textrm{NR}_1) P(\textrm{G}|\textrm{NR}_2) \\
+  &P(\textrm{NR}_3|\textrm{NR}_2) P(\textrm{A}|\textrm{NR}_3)
+  P(\textrm{NR}_4|\textrm{NR}_3) P(\textrm{A}|\textrm{NR}_4)
+  P(\textrm{NR}_5|\textrm{NR}_4) P(\textrm{A}|\textrm{NR}_5) \\
+&= (.25) (.98 * .25) (.98 * .25) (.98 * .25) (.98 * .25) \\
+&= 0.0009007502 
+\end{align}
+
+The most likely state path is thus ($NR, NR, NR, NR, NR$), where the entire
+sequence is part of a non-coding block.
+
+
+## Problem 2
+**Consider the simple HMM in slide 26 of the imputation lecture. It has three
+states, representing three haplotypes: $h_1 = 000011$, $h_2 = 001011$, $h_3 =
+111010$. We assume the transition probability between any two different
+haplotypes is 0.1, and the self-transition probability 0.8. The mutation
+probability for each position is 0.02, i.e. with probability 0.02, we observe a
+different allele from the underlying haplotype. Suppose our sample genotype is 
+$G=?00010$, our goal is to impute the missing allele.**
+
+### (a)
+**We would like to infer the missing state path Z. There are a large number of
+possible paths and we consider only a few here, $h_1 h_1 h_1 h_1 h_1 h_1$, 
+$h_1 h_1 h_1 h_1 h_3 h_3$, $h_2 h_2 h_2 h_2 h_3 h_3$. For each of these paths,
+evaluate $P(Z|H)$.**
+
+
+<!--&= \frac{P(Z)P(G_{2-6})}{P(H)} \\ -->
+
+<!--P(Z|H) &= \frac{P(Z, H)}{P(H)} \\ -->
+<!--  &= \frac{P(Z, H)}{\sum_Z P(Z,H)} \\ -->
+<!--  &= \sum_{Z=h1} P(Z)P(G_{2-6}) \\ -->
+
+<!--\begin{align} -->
+<!--P(Z=h_1, H) &= \sum_Z P(z_1|h_1) (.8 * .98) (.8 * .98) (.8 * .98) (.8 * .98) (.8 * .02) \\ -->
+<!--  &= 0.006044832 \sum_Z P(z_1|h_1) \\ -->
+<!--  &= 0.006044832 (.02 + .98) \\ -->
+<!--  &= 0.006044832 -->
+<!--\end{align} -->
+
+<!--\begin{align} -->
+<!--P(Z=h_2, H) &= \sum_Z P(z_1|h_1) (.8 * .98) (.8 * .98) (.8 * .98) (.8 * .98) (.8 * .02) \\ -->
+<!--  &= 0.006044832 \sum_Z P(z_1|h_1) \\ -->
+<!--  &= 0.006044832 (.02 + .98) \\ -->
+<!--  &= 0.006044832 -->
+<!--\end{align} -->
+
+\begin{align}
+P(Z=h_1|H) &= \sum_{Z=h1} P(Z) (.8 * .98) (.8 * .98) (.8 * .98) (.8 * .98) (.8 * .02) \\
+  &= 0.006044832 \sum_Z P(Z) \\
+  &= 0.006044832 (.02 + .98) \\
+  &= 0.006044832
+\end{align}
+
+\begin{align}
+P(Z=h_1|H) &= \sum_Z P(Z) (.8 * .98) (.8 * .98) (.8 * .98) (.1 * .98) (.8 * .98) \\
+  &= 0.0370246 \sum_Z P(Z) \\
+  &= 0.0370246
+\end{align}
+
+<!-- P(Z|H) &= P(Z| G=h_2 h_2 h_2 h_2 h_3 h_3) \\ -->
+\begin{align}
+P(Z=h_2|H) &= \sum_Z P(Z) (.8 * .98) (.8 * .02) (.8 * .98) (.1 * .98) (.8 * .98) \\
+  &= 0.000755604 \sum_Z P(Z) \\
+  &= 0.000755604
+\end{align}
+
+Normally, one would sum over all possible paths to get the likelihood of
+$Z=h_1$, but here, only three paths are considered possible. Rescaling for this
+yields:
+
+\begin{align}
+P(Z=h_1|H=h_1 h_1 h_1 h_1 h_1 h_1) &= \frac{0.006044832}{0.006044832 + 0.0370246 + 0.000755604} \\
+  &= 0.137931 \\
+P(Z=h_1|H=h_1 h_1 h_1 h_1 h_3 h_3) &= \frac{0.0370246}{0.006044832 + 0.0370246 + 0.000755604} \\
+  &= 0.8448276 \\
+P(Z=h_2|H=h_2 h_2 h_2 h_2 h_3 h_3) &= \frac{0.000755604}{0.006044832 + 0.0370246 + 0.000755604} \\
+  &= 0.01724138
+\end{align}
+
+
+### (b)
+**Let $G_1$ be the genotype at the first position, and $G_{2-6}$ be the rest.
+Compute $P(G_1 |G_{2-6}, H)$ for $G_1 = 0$ or $1$. To rigorously compute this
+probability, we need to sum over all possible state paths. To simplify the
+problem, consider only the three paths defined above. Hint: check equations in
+slides 30 and 14.**
+
+
+Under the simplifying assumption that the three above haplotypes are the only
+possible variants, for $G_1 = 0$:
+
+\begin{align}
+P(G_1=0 | G_{2-6}, H) &= \frac{P( G_1, G_{2-6} | H)}{P( G_{2-6}, H)} \\
+  &= \sum_H \frac{P( G_{1}, G_{2-6} | H)}{\sum_{G_{1}} P(G_{1}, G_{2-6} | H)} \\
+  &= 0.137931 \frac{ .98 (.8 * .98) (.8 * .98) (.8 * .98) (.8 * .98) (.8 * .02) }{ (.8 * .98) (.8 * .98) (.8 * .98) (.8 * .98) (.8 * .02) } \\
+  &+ 0.8448276 \frac{ .98 (.8 * .98) (.8 * .98) (.8 * .98) (.1 * .98) (.8 * .98) }{ (.8 * .98) (.8 * .98) (.8 * .98) (.1 * .98) (.8 * .98) } \\
+  &+ 0.01724138 \frac{ .98 (.8 * .98) (.8 * .02) (.8 * .98) (.1 * .98) (.8 * .02) }{ (.8 * .98) (.8 * .02) (.8 * .98) (.1 * .98) (.8 * .02) } \\
+  &= .98 (0.137931+0.8448276+0.01724138) \\
+  &= .98
+\end{align}
+<!--  &= .98 (0.137931+0.8448276) + 0.01724138(.02) \\ -->
+<!--  &= 0.9634483 -->
+
+Given that alleles can either be 0 or 1:
+
+\begin{align}
+P(G_1=1 | G_{2-6}, H) &= 1 - P(G_1=0 | G_{2-6}, H) \\
+  &= 1 - .98 \\
+  &= .02
+\end{align}
+
+
+
+### (c)
+**When we do association testing on the first SNP, we need the mean genotype of
+this SNP. Compute it based on the results above.**
+
+\begin{align}
+E[Z] &= 1*P(G_1=1 | G_{2-6}, H) + 0 * P(G_1=0 | G_{2-6}, H) \\
+  &= 1*.02 + 0*.98 \\
+  &= .02
+\end{align}
+<!--  &= 1*0.0372414 + 0*0.9634483 \\ -->
+<!--  &= 0.0372414 -->
+
+
+## Problem 3
+**Calculate the power to detect the association between a SNP with minor allele
+frequency in controls of 0.15 and 0.20 in cases (this provides maf and effect
+size) at a significance level of 0.05 ($\alpha$) and 1000 cases and 2000
+controls (sample size). Use the $\chi^2$ statistic for the 2 by 3 tables as
+seen in class.**
+
+```{r}
+nsim     <- 1000
+maf1     <- .2
+maf0     <- .15
+ncase    <- 1000
+ncontrol <- 2000
+nsamp    <- ncase + ncontrol
+alpha    <- .05
+disvec   <- c(rep(1, ncase), rep(0, ncontrol))
+```
+
+
+```{r}
+# Generate X-square statistics for a null model where both case and controls
+# come from same distribution with maf=.15.
+chi2null <- rep(NA, nsim)
+for (ss in 1:nsim) {
+  xfvec <- c(rbinom(ncase, 1, maf0), rbinom(ncontrol, 1, maf0))
+  xmvec <- c(rbinom(ncase, 1, maf0), rbinom(ncontrol, 1, maf0))
+
+  snpvec <- xfvec + xmvec
+
+  mydata <- data.frame(disvec, snpvec)
+
+  tt <- table(mydata)
+
+  chi2null[ss] <- chisq.test(tt)$statistic
+}
+```
+
+```{r}
+# Generate X-square statistics for the alternative model where case and controls
+# come from different distributions with maf=.2 and maf=.15, respectively.
+chi2alt <- rep(NA, nsim)
+for (ss in 1:nsim) {
+  # assume both case and controls come from different distributions
+  xfvec <- c(rbinom(ncase, 1, maf1), rbinom(ncontrol, 1, maf0))
+  xmvec <- c(rbinom(ncase, 1, maf1), rbinom(ncontrol, 1, maf0))
+
+  snpvec <- xfvec + xmvec
+
+  mydata <- data.frame(disvec, snpvec)
+
+  tt <- table(mydata)
+
+  chi2alt[ss] <- chisq.test(tt)$statistic
+}
+```
+
+
+### (a)
+**Explain where Hardy Weinberg equilibrium assumption is used.**
+
+HWE is assumed when generating adding together `xfvec` and `xmvec` to get
+`snpvec`. It assumes that the alleles in males and females join together
+randomly.
+
+### (b)
+**Verify that the chi2null is distributed like a $\chi^2$ with 2 degrees of
+freedom by simulating 1000 $\chi^2$ distributed random variables with 2 df
+(`rchisq(nsim, 2)`), plotting the sorted chi2null and the sorted simulated
+$\chi^2$ rv.**
+
+```{r}
+qqplot(chi2null, rchisq(nsim, 2))
+abline(0, 1)
+```
+
+### (c)
+**How does this compare to the threshold if we assume that under the null, the
+$\chi^2$ statistic follows $chi^2$ distribution with 2 degrees of freedom?**
+
+```{r}
+chi2thres <- quantile(chi2null, 1-alpha)
+print(chi2thres)
+```
+
+
+### (d)
+**What’s the power to detect the association?**
+
+```{r}
+mean(chi2alt>chi2thres)
+```
+
+The power for this test ($n = 1000+2000 = 3000$) is .997. See the below
+illustration (power is area under the 'alt' distribution to the right of the
+threshold).
+
+
+```{r}
+combined_data <- data.frame(assoc=c(rep("null", nsim), rep("alt", nsim)),
+                            chi2stat=c(chi2null, chi2alt))
+ggplot(combined_data) + aes(chi2stat) + geom_histogram() + 
+  facet_grid(assoc~.) + geom_vline(xintercept=chi2thres)
+```
+
+
+## Problem 4
+**Show that points to the right of the least significant one that goes above
+the red line will have $FDR \leq 0.05$ according to Benjamini Hochberg. Use the
+example table from the class.**
+
+Given that p-values are uniformly distributed, the expected number of false
+positives, assuming that the null hypothesis is true, is $\alpha m$, where $m$
+is the number of random variables sampled from the null distribution.
+
+The FDR is defined as:
+
+\begin{align}
+  FDR &= \frac{\textrm{False discoveries}}{\textrm{Total discoveries}}
+\end{align}
+
+Using the Benjamini-Hochberg correction, if k discoveries are declared
+significant for a q-value of $\delta$, the number of false discoveries among
+them is expected to be $k \alpha = k \delta j/m$, because p-values (Type I
+errors) are uniformly distributed in the null model, meaning the FDR is
+$\frac{\delta}{m}$.
+
+Therefore, if for example $\delta = .05$, then the FDR of the significant tests
+is at most $.05$, when $k=m$. For illustration, consider the following table
+for $m=10$ tests.
+
+| Rank | j/m | $\delta$ j/m | P(False discovery) | E(False discovery) | Total discoveries (k) | FDR   | 
+| ---  | --- | ---          | ---                | ---                | ---                   | ---   | 
+| 1    | .1  | 0.005        | 0.005              | 0.005              | 1                     | 0.005 | 
+| 2    | .2  | 0.010        | 0.010              | 0.020              | 2                     | 0.010 | 
+| 3    | .3  | 0.015        | 0.015              | 0.045              | 3                     | 0.015 | 
+| 4    | .4  | 0.020        | 0.020              | 0.080              | 4                     | 0.020 | 
+| 5    | .5  | 0.025        | 0.025              | 0.125              | 5                     | 0.025 | 
+| 6    | .6  | 0.030        | 0.030              | 0.180              | 6                     | 0.030 | 
+| 7    | .7  | 0.035        | 0.035              | 0.245              | 7                     | 0.035 | 
+| 8    | .8  | 0.040        | 0.040              | 0.320              | 8                     | 0.040 | 
+| 9    | .9  | 0.045        | 0.045              | 0.405              | 9                     | 0.045 | 
+| 10   | 1   | 0.050        | 0.050              | 0.500              | 10                    | 0.050 | 
+
+
+# Lab 3: Genotype Imputation and Haplotype Phasing with IMPUTE2
+
+## Problem 1
+All the files that begin with the label "example.chr22" are from a particular
+stretch of DNA on chromosome. What position in this stretch has the highest
+recombination rate? What is it (please include units)?
+
+```{bash, eval=FALSE}
+cat example.chr22.map  | sort -k 3 -gr | head
+```
+
+Position: 20299958  
+Recombination rate: 0.0056794611  
+Map position: 15.0106101777
+
+
+## Problem 2
+How many haplotypes are provided in the example file *example.chr22.hm3.haps*?
+How many in the example file *example.chr22.1kG.haps*?
+
+```{bash, eval=FALSE}
+wc -l example.chr22.hm3.haps
+```
+
+116 example.chr22.hm3.haps
+
+There are 116 haplotypes.
+
+```{bash, eval=FALSE}
+wc -l example.chr22.1kG.haps
+```
+790 example.chr22.1kG.haps
+
+There are 790 haplotypes.
+
+
+## Problem 3
+What is the major allele for SNP "rs1669115"? What is the minor allele?
+
+```{bash, eval=FALSE}
+grep rs1669115 example.chr22.1kG.haps
+```
+
+rs1669115 20364768 C T
+
+Major Allele: C  
+Minor Allele: T  
+
+
+## Problem 4
+Open the summary file in a text editor and scroll down to line 60 (L60), where
+it should mention 'flipping strands'. What does it say and how would you
+interpret this? 
+
+At line 60, the summary file reads:
+```
+ --flipped strand at 14 out of 33 SNPs
+
+```
+
+The program needed to modify 14 sequence imputations by switching the reference
+strand (+ or -).
+
+
+## Problem 5
+Recalling your knowledge of the structure of PED files, what do you notice
+about both the phenotype and gender information in the file we just converted
+("real_small.ped")?
+
+The sex and phenotype information are all unknown.
+
+
+## Problem 6
+In a step-by-step fashion, describe what steps 1, 2, 3, & 5 in
+**"PED_change_small.sh"** are doing in order to create
+*"real_small_final.ped"*.
+
+```
+cut -f 1-5 real_small.ped > A.ped
+```
+Cut out columns 1 through 5 and redirect to A.ped.
+
+```
+cut -f 7- real_small.ped > C.ped
+```
+Cut columns 7 and onward and redirect from stdout to C.ped.
+
+```
+paste A.ped PHENOTYPE.txt > B.ped
+```
+
+Merge the lines from A.ped and PHENOTYPE.txt to B.ped.
+
+```
+sed -e 's/$//' -i B.ped
+```
+
+Removing EOL characters and carriage returns.
+
+
+```
+paste B.ped C.ped > real_small_final.ped
+```
+
+Merge lines from B.ped C.ped and redirect output to real_small_final.ped
+
+
+## Problem 7
+Run a basic association (--assoc) on the *"real_small_final"* dataset I
+provided you. First, you'll need to create a BED file and then run the
+association. Save your commands in a BASH script named **"GWAS_execute.sh"**
+and provide them. Hint: You may need the "--allow-no-sex" flag. 
+
+```{bash GWAS_execute.sh, eval=FALSE}
+#! /bin/bash
+
+plink --noweb --file real_small_final --make-bed --out real_small_final
+plink --noweb --bfile real_small_final --allow-no-sex --assoc --out real_small_final
+```
+
+
+## Problem 8
+According to this analysis, what is the most highly associated SNP? What is the
+unadjusted p-value? Considering what you know about how we found this SNP (see
+above), what do you think this SNP's adjusted (Bonferroni-correction) p-value
+should be? 
+
+```
+ CHR         SNP         BP   A1      F_A      F_U   A2        CHISQ            P           OR
+   0   rs5999749   20517660    1   0.5824        0    2        146.1    1.241e-33           NA
+```
+
+The unadjusted p-value is 1.241e-33.
+
+To get the Bonferroni-adjusted, multiply the p-value by the number of markers
+(32): $1.241\textrm{e-}33 * 32 = 3.9712\textrm{e-}32$.  
+
+
+## Problem 9
+Use the knowledge gained in Lab 2 to export the *.assoc* file and produce a
+Manhattan plot in RStudio. Make sure to use the appropriate
+Bonferroni-correction (think about how you identified this region as well) for
+the Manhattan plot.
+
+```{r}
+library(ggplot2)
+
+real_small_final_assoc <- read.table("Example/real_small_final.assoc",header=TRUE)
+real_small_final_assoc <- subset(real_small_final_assoc, P != "NA")
+real_small_final_assoc$SNP <- as.character(real_small_final_assoc$SNP)
+
+manhattan <- ggplot(real_small_final_assoc, aes(BP, -log(P), group=factor(CHR),
+                                                color=factor(CHR)))
+bonferroni <- -log(0.05/length(real_small_final_assoc$P))
+
+our_colors <- c("#ff0000", "#a6cee3", "#0000ff", "#1f78b4", "#00ff00",
+                "#b2df8a", "#33a02c", "#fb9a99", "#91003f", "#fdbf6f",
+                "#ff7f00", "#cab2d6", "#6a3d9a", "#ffff99", "#b15928",
+                "#d95f0e", "#377eb8", "#4d4d4d", "#999999", "#dd1c77",
+                "#542788", "#c994c7")
+
+plt <- manhattan + geom_point(size=2, alpha=.25) +
+  geom_hline(yintercept=bonferroni, lty=2) +
+  xlab("SNP Position (Chromosomes Ordered 1-22)") +
+  ylab("Association Significance (-ln(p-value))") +
+  scale_colour_manual(values = our_colors)
+plt
+```
+
+
+## Problem 10
+Using the first command in *"gtool_execute.sh"* as a guide, write and provide a
+second command in the script that will convert this file
+**"example.chr22.one.phased.impute2"** to PED format, and name this output
+*"test_out"*. You can "comment out" (turn off) the first command by putting a #
+in front of it. Do this and then run your bash script.
+
+```{bash gtool_execute.sh, eval=FALSE}
+#! /bin/bash
+
+# ../gtool -G --g ../Example/example.chr22.study.gens --s \
+#   ../Example/example.study.samples --ped ../Example/real_small.ped --map \
+#   ../Example/real_small.map --threshold 0.9
+
+../gtool -G --g ../Example/example.chr22.one.phased.impute2 --s \
+  ../Example/example.study.samples --ped ../Example/test_out.ped --map \
+  ../Example/test_out.map --threshold 0.9
+```
+
+
+## Problem 11
+Use **"PED_change_small.sh"** as a guide to create and provide your own BASH
+script named **"PED_change.sh"** that modifies your *"test_out"* PED file from
+GTOOL by inserting *PHENOTYPE.txt* into it, naming it *"real_test.ped"*. (Hint:
+You don't need to change Step 4 at all, and the **PHENOTYPE.txt** file is also
+on Canvas). Make sure you rename your MAP file to match your new PED file.
+
+```{bash PED_change.sh, eval=FALSE}
+#! /bin/bash
+set -eu
+
+cut -f 1-5 test_out.ped > A.ped   ## Step 1
+cut -f 7- test_out.ped > C.ped    ## Step 2
+paste A.ped PHENOTYPE.txt > B.ped ## Step 3
+sed -e 's/$//' -i B.ped           ## Step 4
+paste B.ped C.ped > real_test.ped ## Step 5
+cp test_out.map real_test.map
+```
+
+
+## Problem 12
+Make a BED and FAM file from the PED and MAP files named *"real_test"*, then
+run a basic association on these new files. Save these commands in your
+**"GWAS_execute.sh"** script and provide them. 
+
+```{bash, eval=FALSE}
+#! /bin/bash
+
+plink --noweb --file real_test --make-bed --out real_test
+plink --noweb --bfile real_test --allow-no-sex --assoc --out real_test
+```
+
+
+## Problem 13
+Use your BASH knowledge to find the most highly associated SNP in the
+*"real_test.assoc"* file. What SNP is it? What is the non-adjusted p-value?
+(Hint: using the -g flag with the *"sort"* command will deal with some issues
+that a basic numerical sorting with -n tends to have with p-values that have
+exponents attached to them. There's also another way to deal with this issue
+while still utilizing the -n flag instead of -g, which is based on the
+p-values' relationship to another column within this file). 
+
+```{bash, eval=FALSE}
+sort --key=9 -g real_test.assoc | grep "e-" | head 
+```
+
+```{bash, eval=FALSE}
+ CHR         SNP         BP   A1      F_A      F_U   A2        CHISQ            P           OR
+   0   rs4821339   20499199    2   0.6371        0    1        170.8     5.04e-39           NA
+   0 22-20494984   20494984    2   0.5829        0    1        146.1    1.223e-33           NA
+   0   rs2266969   20503907    2   0.5829        0    1        146.1    1.223e-33           NA
+   0   rs2283791   20460945    2   0.5829        0    1        146.1    1.223e-33           NA
+   0   rs2283793   20511478    2   0.5829        0    1        146.1    1.223e-33           NA
+   0  rs28697123   20498895    2   0.5829        0    1        146.1    1.223e-33           NA
+   0  rs28720995   20462403    2   0.5829        0    1        146.1    1.223e-33           NA
+   0  rs34550586   20475634    2   0.5829        0    1        146.1    1.223e-33           NA
+   0   rs4640486   20498202    2   0.5829        0    1        146.1    1.223e-33           NA
+   0  rs56227348   20475732    2   0.5829        0    1        146.1    1.223e-33           NA
+
+```
+
+rs4821339 is the most highly associated p-value.
+
+
+## Problem 14
+Similar to Problem 9, produce a Manhattan plot for the file in RStudio.
+Describe the differences between this plot and the plot from Problem 9 in a
+couple of sentences.
+
+```{r}
+library(ggplot2)
+real_test_assoc <- read.table("Example/real_test.assoc",header=TRUE)
+real_test_assoc <- subset(real_test_assoc, P != "NA")
+real_test_assoc$SNP <- as.character(real_test_assoc$SNP)
+
+manhattan <- ggplot(real_test_assoc, aes(BP, -log(P), group=factor(CHR),
+                                         color=factor(CHR)))
+
+bonferroni <- -log(0.05/length(real_test_assoc$P))
+
+our_colors <- c("#ff0000", "#a6cee3", "#0000ff", "#1f78b4", "#00ff00",
+                "#b2df8a", "#33a02c", "#fb9a99", "#91003f", "#fdbf6f",
+                "#ff7f00", "#cab2d6", "#6a3d9a", "#ffff99", "#b15928",
+                "#d95f0e", "#377eb8", "#4d4d4d", "#999999", "#dd1c77",
+                "#542788", "#c994c7")
+
+plt <- manhattan + geom_point(size=2, alpha=.25) +
+  geom_hline(yintercept=bonferroni, lty=2) +
+  xlab("SNP Position (Chromosomes Ordered 1-22)") +
+  ylab("Association Significance (-ln(p-value))") +
+  scale_colour_manual(values = our_colors)
+plt
+```
+
+The new Manhattan plot displays more SNPs because more were tested in the GWAS.
+Also, because more markers were tested (581 vs 32), the Bonferroni-adjusted
+significance cutoff is higher (9.360483 vs 6.461468).
+
+The two plots seem to display a similar overall pattern, which is to be
+expected given that what was plotted in Problem 9 is a subset of the data
+plotted here.
