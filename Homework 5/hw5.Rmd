@@ -1,0 +1,338 @@
+---
+title: "Problem Set 5"
+author: "Ansel George"
+output: pdf_document
+---
+
+# Homework 5
+
+## Problem 1
+*In a fairly large population of people living in a commune in the southern
+United States, everyone cares about good nutrition. All of the members of this
+population eat very nutritious foods, and their diets are very similar to each
+other. How do you think the height of individuals in this commune population
+would compare with that of the general population in the following categories?*
+
+### (a) Mean height
+If consumption of nutritious foods increase (or decrease) height, then the
+commune people will be taller (or shorter) than the general population as long
+as a negligible proportion of the general population prefers to eat nutritious
+food, too.
+
+### (b) Heritability for height
+In the population on the commune, heritability for height may or may not
+change. If the consumption of nutritious food in the commune results in a
+height distribution with greater variance than what is found in the general
+population, total phenotypic and environmental variances will increase, meaning
+that the heritability of height (the ratio $\frac{V_G}{V_P}$) will decrease. If
+the height distribution variance is unchanged, though the means could change,
+then the environmental variance and therefore heritability will remain
+unchanged.
+
+The heritability for height in the total population (commune and everyone else)
+will decrease because the differential in height induced by nutritious diet
+will increase total population environmental and phenotypic variance while the
+genetic variance remains static. This will reduce global heritability
+irrespective of per-population differences in variance.
+
+### (c) Genetic variation for alleles that affect height
+The alleles themselves, barring some epigenetic effect from diet, remain
+unchanged in frequency if height or other factors relating to consumption of a
+nutritious diet at a commune is not under selection. This will leave genetic
+variation static, though total variation in phenotype may change.
+
+## Problem 2
+*Suppose the average weight of a man in the population is 170 lbs. The
+heritability of body weight is 0.4. In a family, the father’s weight is 200 lb,
+what is the predicted average weight of the son? (Hint: What’s the linear model
+relating fathers’ and the sons’ weights?)*
+
+$170 + (200-170) * .2 = 176$
+
+## Problem 3
+*Two questions about heritability:*
+
+### (a) 
+*We have a family of four with son and daughter. The daughter is from the
+mother’s previous marriage. Derive the 4 by 4, Genetic Relationship Matrix (the
+matrix K) of this family. If you don’t know what a matrix is, just write down
+the pairwise K for each pair.*
+
+|     | M   | F   | D   | S   | 
+| --- | --- | --- | --- | --- | 
+| M   | 1   | 0   | .5  | .5  | 
+| F   |     | 1   | 0   | .5  | 
+| D   |     |     | 1   | .25 | 
+| S   |     |     |     | 1   | 
+
+
+### (b)
+*We are studying the personality trait, extraversion. From pedigree studies, it
+is estimated that its heritability is 0.4. From GWAS data, the estimated
+heritability from GCTA is 0.12. Discuss what might explain the gap between the
+two designs.*
+
+Calculating heritability from a pedigree study will give an inflated result
+because relatives often live in a shared environment. This will depress the
+environmental component of phenotypic variability and allow additive genetic
+variance to become more prominent. 
+
+GWAS data from individuals, though they may reflect causal variants due to
+possible common ancestry, are less likely to be skewed by common environment.
+This allows environmental variance to explain a greater proportion of phenotype
+variance and depress the heritability result.
+
+
+## Problem 4
+*Heritability of a trait depends on the number and average effect size of
+genetic variants of this trait.*
+
+### (a)
+*Suppose a genome has $M$ variants, and each variant is a causal variant with
+effect size following the distribution $N(0, \sigma^2 )$. We assume here that
+the genotype is standardized, i.e. mean 0 and variance 1. Suppose the
+phenotypic variance is $V_P$. Show that the narrow-sense heritability is given
+by: $\frac{M \sigma^2}{V_P}$.*
+
+Narrow-sense heritability is concerned only with additive genetic effects (no
+epistasis, dominance effects, etc.). Assuming that all alleles are iid, the
+distribution of their cumulative effects is the sum of distributions of there
+individual effects, which follow $N(0,\sigma^2)$. The
+distribution of the sum $\sim(M * 0, M * \sigma^2) = N(0, M \sigma^2)$.
+
+Therefore, the narrow-sense heritability is:
+\begin{align}
+\frac{V_G}{V_P} &= \frac{M\sigma^2}{V_P}
+\end{align}
+
+
+### (b) 
+*Now suppose we have a different distribution of effect sizes. With probability
+$1-\pi$, a variant has effect size $0$. And with probability $\pi$, it is a
+causal variant with effect following $N(0, \sigma^2)$. What is the heritability
+now?*
+
+Assuming the alleles contribute independently to phenotype, the cumulative
+effects of $M$ alleles follow $N(M * 0 * (1-\pi) + 0 * \pi, M * 0 * (1-\pi) + M
+* \sigma^2 * \pi) = N(0, M \pi \sigma^2)$.
+
+Therefore, the narrow-sense heritability is:
+
+\begin{align}
+\frac{V_G}{V_P} &= \frac{M\pi\sigma^2}{V_P}
+\end{align}
+
+# Lab 5
+
+## Problem 1
+
+*How many individuals are there in the test dataset?*
+
+3925 samples (individuals), 1000 markers
+
+## Problem 2
+
+*Is this phenotypic trait heritable (is it statistically significant)?*
+
+| Source  | Variance | SE       |
+| ---     | ---      | ---      |
+| V(G)    | 0.022152 | 0.008751 |
+| V(e)    | 0.969117 | 0.022896 |
+| Vp      | 0.991269 | 0.022467 |
+| V(G)/Vp | 0.022347 | 0.008769 |
+
+|       |            |
+| ---   | ---        |
+| logL  | -1943.245  |
+| logL0 | -1947.715  |
+| LRT   | 8.940      |
+| df    | 1          |
+| Pval  | 1.3948e-03 |
+| n     | 3925       |
+
+The trait has low but statistically significant ($p=1.3948e-03$) heritability.
+
+## Problem 3
+
+*What is the heritability estimate? What is the standard error of this estimate?*
+
+The heritability estimate is V(G)/Vp, which is about .022347 with standard
+error 0.008769.
+
+## Problem 4
+
+*For phenotype 1, create a GRM based on the 250,000 whole-genome SNPs (250k.bed,
+250k.fam, 250k.bim) and estimate the heritability (Hints: Making a binary GRM
+may save you major time, and don't forget to specify you want column 1 in the
+phenotype file used for REML analysis).*
+
+```{bash,eval=F}
+#! /bin/bash
+
+gcta --bfile 250k --autosome --maf 0.01 --make-grm-bin --out 250k
+gcta --grm-bin 250k --pheno two_phenotypes.txt --mpheno 1 --reml --out 250k
+```
+
+(The maf 0.01 threshold doesn't screen out any data, so I just left it in...)
+
+| Source  | Variance | SE       |
+| ---     | ---      | ---      |
+| V(G)    | 1.431174 | 0.943937 |
+| V(e)    | 1.464078 | 0.936999 |
+| Vp      | 2.895253 | 0.129736 |
+| V(G)/Vp | 0.494318 | 0.324073 |
+
+|       |            |
+| ---   | ---        |
+| logL  | -1033.236  |
+| logL0 | -1034.444  |
+| LRT   | 2.417      |
+| df    | 1          |
+| Pval  | 6.0023e-02 |
+| n     | 1000       | 
+
+The heritability estimate is $0.494318$ with standard error $0.324073$
+($p=6.0023e-02$, so not strictly significant at $\alpha=.5$).
+
+## Problem 5
+
+*Now, create a GRM based on the 500,000 whole-genome SNPs (500k.bed, 500k.fam,
+500k.bim) and estimate the heritability.*
+
+```{bash,eval=F}
+#! /bin/bash
+
+gcta --bfile 500k --autosome --maf 0.01 --make-grm-bin --out 500k
+gcta --grm-bin 500k --pheno two_phenotypes.txt --mpheno 1 --reml --out 500k
+```
+
+| Source  | Variance | SE       |
+| ---     | ---      | ---      |
+| V(G)    | 1.954557 | 0.998138 |
+| V(e)    | 0.939478 | 0.985738 |
+| Vp      | 2.894035 | 0.129835 |
+| V(G)/Vp | 0.675375 | 0.341361 |
+
+|       |            |
+| ---   | ---        |
+| logL  | -1032.413  |
+| logL0 | -1034.444  |
+| LRT   | 4.062      |
+| df    | 1          |
+| Pval  | 2.1926e-02 |
+| n     | 1000       |
+
+This heritability estimate is $0.675375$, with standard error $0.341361$. This
+p-value is lower ($2.1926e-02$) than for the 250k samples, lower than
+$\alpha=.05$ threshold used for significance.
+
+## Problem 6
+
+*How did the estimate and/or SE change and why? What might this say about SNP
+density and estimating heritability more generally?*
+
+The heritability estimate increased with greater sample size but with similar
+standard error. 
+
+The heritability estimate is the ratio of additive genetic effects to phenotype
+variance. Given that the phenotypic variance is constant (set by the data), the
+greater additive variance provided by identifying more causal SNPs from a
+larger dataset will in sum explain a greater proportion of the total phenotypic
+variance, thereby increasing the heritability estimate.
+
+The SE remained roughly unchanged because the number of individuals sampled
+remained the same and the new SNPs were all sampled from the same random
+effects distribution.
+
+## Problem 7
+
+*Create a GRM based only on the causal variants and estimate the heritability.*
+
+```{bash,eval=F}
+#! /bin/bash
+
+gcta --bfile causal --autosome --maf 0.01 --make-grm-bin --out causal
+gcta --grm-bin causal --pheno two_phenotypes.txt --mpheno 1 --reml --out causal
+```
+
+| Source  | Variance | SE       |
+| ---     | ---      | ---      |
+| V(G)    | 1.984345 | 0.175320 |
+| V(e)    | 0.923879 | 0.086392 |
+| Vp      | 2.908225 | 0.150349 |
+| V(G)/Vp | 0.682322 | 0.034312 |
+
+|       |            |
+| ---   | ---        |
+| logL  | -928.164   |
+| logL0 | -1034.444  |
+| LRT   | 212.559    |
+| df    | 1          |
+| Pval  | 0.0000e+00 |
+| n     | 1000       |
+
+## Problem 8
+
+*How did the estimate and/or SE change compared to the REML analysis with the
+500K GRM? Why might this be?*
+
+The heritability estimate did not change, meaning that the 500k SNPs covered
+almost all variants, and the standard error dropped substantially. The change
+in error is due to removing SNPs that are not causal but have high effect size
+arising from chance sampling from the assumed normal distribution for effect
+sizes.
+
+## Problem 9
+
+*Using the GRM generated from 500k SNPs, estimate the genetic correlation
+between phenotype 1 and 2 using a bivariate, rather than a univariate, REML
+run. Genetic correlation between the two will be represented as C(G)\_tr12 in
+the output file. What does this "genetic correlation" mean?*
+
+```{bash,eval=F}
+#! /bin/bash
+
+gcta --grm-bin 500k --pheno two_phenotypes.txt --reml-bivar --out 500k_bivar
+```
+
+| Source      | Variance  | SE       | 
+| ---         | ---       | ---      | 
+| V(G)\_tr1   | 1.999179  | 0.999333 | 
+| V(G)\_tr2   | 1.203191  | 0.582956 | 
+| C(G)\_tr12  | 0.866544  | 0.573898 | 
+| V(e)\_tr1   | 0.895317  | 0.986288 | 
+| V(e)\_tr2   | 0.419796  | 0.574601 | 
+| C(e)\_tr12  | -0.121214 | 0.565190 | 
+| Vp_tr1      | 2.894496  | 0.129885 | 
+| Vp_tr2      | 1.622987  | 0.072879 | 
+| V(G)/Vp_tr1 | 0.690683  | 0.341517 | 
+| V(G)/Vp_tr2 | 0.741344  | 0.354833 | 
+| rG          | 0.558724  | 0.286160 | 
+
+|      |           | 
+| ---  | ---       | 
+| logL | -1713.064 | 
+| n    | 2000      | 
+
+
+From the [online documentation](https://cnsgenomics.com/software/gcta/GCTA_UserManual_v1.24.pdf):
+
+> Output file format  
+> header line;  
+> genetic variance for trait 1, estimate and standard error (SE);  
+> genetic variance for trait 2, estimate and SE;  
+> genetic covariance between traits 1 and 2, estimate and SE;  
+> residual variance for trait 1, estimate and SE;  
+> residual variance for trait 2, estimate and SE;  
+> residual covariance between traits 1 and 2, estimate and SE;  
+> proportion of variance explained by all SNPs for trait 1, estimate and SE;  
+> proportion of variance explained by all SNPs for trait 2, estimate and SE;  
+> genetic correlation;  
+> sample size)  
+
+C(G)\_tr12 does not represent genetic correlation but rather covariance between
+phenotypes 1 and 2. It is the product of average relatedness for the data and
+heritability (by expectation from the random effects model). 
+
+rG represents genetic correlation and is computed as a normal correlation
+coefficient using the genetic variance and covariance data.
