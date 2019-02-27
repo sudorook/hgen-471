@@ -4,76 +4,194 @@ author: "Ansel George"
 output: pdf_document
 ---
 
-# Problem 1
-We are deriving a new test for pathway (SNP set) analysis. Suppose a pathway is
-assigned $n$ SNPs, with p-values $p_1 , \hdots , p_n$. Our test is based on
+```{r,message=F}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(readr)
+
+set.seed(10)
+```
+# Homework 1
+
+## Problem 1
+*We are deriving a new test for pathway (SNP set) analysis. Suppose a pathway
+is assigned $n$ SNPs, with p-values $p_1 , \hdots , p_n$. Our test is based on
 one-sided $Z$-scores of these SNPs, $Z_1 , \hdots, Z_n$. The test statistic is
-$Z = \sum_{i=1}^n Z_i$.
+$Z = \sum_{i=1}^n Z_i$.*
 
-## (a)
-Suppose the SNPs are all independent (not in LD), what is the null distribution
-of $Z$?
+### (a)
+*Suppose the SNPs are all independent (not in LD), what is the null distribution
+of $Z$?*
 
-## (b)
-Now suppose the first two SNPs are in perfect LD, what is the null distribution
-of $Z$?
+\begin{align}
+E[Z] &= E[\sum_{i=1}^n Z_i] \\
+  &= \sum_{i=1}^n E[Z_i] \\
+  &= \sum_{i=1}^n 0 \\
+  &= 0
+\end{align}
 
-## (c)
-Suppose we have a pathway of $10$ SNPs, $p_1 = p 2 = 0.01$, $p_3 = p_4 = p_5 =
-0.2$ and $p_6 = \hdots = p_10 = 0.75$. What is the p-value at the pathway
+If the Z-scores are independent, then they are completely uncorrelated.
+
+\begin{align}
+Var[Z] &= Var[\sum_{i=1}^n Z_{i}] \\
+  &= \sum_{i=1}^n Var[Z_{i}] \\
+  &= \sum_{i=1}^n 1 \\
+  &= n
+\end{align}
+
+The test statistic $Z$ is distributed $\sim N(0, n)$.
+
+### (b)
+*Now suppose the first two SNPs are in perfect LD, what is the null
+distribution of $Z$?*
+
+\begin{align}
+E[Z] &= E[\sum_{i=1}^n Z_{i}] \\
+  &= \sum_{i=1}^n E[Z_i] \\
+  &= \sum_{i=1}^n 0 \\
+  &= 0
+\end{align}
+
+If Z-scores are in perfect LD, then their covariance is 1.
+
+\begin{align}
+r &= \frac{Cov(Z_i,Z_j)}{\sqrt{Var(Z_i)Var(Z_j)}} \\
+1 &= \frac{Cov(Z_i,Z_j)}{1 * 1} \\
+\implies Cov(Z_i,Z_j) &= 1
+\end{align}
+
+\begin{align}
+Var[Z] &= Var[\sum_{i=1}^n Z_i] \\
+  &= \sum_{i=1}^n Var[Z_i] + \sum_{j \neq i}^n\sum_{i=1}^n Cov[Z_i,Z_j] \\
+  &= \sum_{i=1}^n 1 + \sum_{j \neq i}^n\sum_{i=1}^n 1 \\
+  &= n + n(n-1) \\
+  &= n^2
+\end{align}
+
+
+### (c)
+*Suppose we have a pathway of $10$ SNPs, $p_1 = p_2 = 0.01$, $p_3 = p_4 = p_5 =
+0.2$ and $p_6 = \hdots = p_{10} = 0.75$. What is the p-value at the pathway
 level in the two scenarios above? Under which scenario, the pathway is more
-significant, and why?
+significant, and why?*
 
-## (d)
-A related test is $T = \sum_i Z_i^2$. What is the null distribution of this
+\begin{align}
+\bar{x} &= \frac{1}{10}(2*.01 + 3* .02 + 5*.75) \\
+  &= .437 \\
+s^2 &= \frac{1}{10-1} \big( (2*(.01-.437))^2 + (3*(.02-.437))^2 + (5*(.75-.437))^2 \big) \\
+  &= .1136678
+\end{align}
+
+
+```{r}
+p <- c(.01, .01, .2, .2, .2, .75, .75, .75, .75, .75)
+
+# Enrichment approach
+# binom.test(c(sum(p<=.01),sum(p>.01)), 10, p=.5)
+
+# Association approach
+z <- qnorm(p, 0, 1) # convert p-values to z-scores
+
+dnorm(sum(z), 0, length(z)) # no linkage
+dnorm(sum(z), 0, length(z)^2) # full linkage
+```
+
+Under the no linkage model, the pathway is not significant ($p=0.03710818$),
+but under the assumption of full linkage, it is ($p=0.003986536$).
+
+
+### (d)
+*A related test is $T = \sum_i Z_i^2$. What is the null distribution of this
 test? And compare the two methods, using $Z$ or $Z^2$ , which one do you
-prefer, and why?
+prefer, and why?*
+
+$Z_{i}^2$ follows a $\chi^2$ distribution, so $T$ is the sum of $\chi^2$
+statistics.
+
+If SNPs are independent, then $T$ also follows a $\chi^2$ distribution with
+degrees of freedom equal to the total number of SNPs, but if not, then the
+null distribution is undefined. It will need to be simulated by permuting the
+data.
+
+The $Z$ method is more straightforward and computationally easier, but the
+$Z^2$ method is more flexible in that it allows for significance testing given
+a set of p-values without the need for accompanying linkage data.
 
 
-# Problem 2
-In this problem, you will compare genetics of two traits using the polygenic
+## Problem 2
+*In this problem, you will compare genetics of two traits using the polygenic
 risk score approach we discussed in the class. You are given the genotype and
 phenotype data of two traits. For simplicity, the data has only 4 SNPs, and
-they are considered to be independent.
+they are considered to be independent.*
 
-## (a)
+#3# (a)
 Calculate the effect size of all SNPs in trait 1.
 
-## (b)
-Using the estimated effect sizes, compute polygenic risk score (PRS) of trait 1
-in the samples of trait 2 (i.e. we predict the trait 1 phenotype in these
-samples).
+```{r,message=F}
+# Load and tidy data
+trait1 <- read_tsv('trait1.txt')
+trait2 <- read_tsv('trait2-1.txt')
 
-## (c)
-Compute the correlation of the PRS with the phenotypes of trait 2.
+trait1_m <- trait1 %>% gather(SNP, Genotype, 3:6)
+trait2_m <- trait2 %>% gather(SNP, Genotype, 3:6)
+```
+
+```{r}
+# Regress phenotype on genotype for each SNP
+b1 <- trait1_m %>% group_by(SNP) %>%
+  do(m = lm(phenotype ~ Genotype, data=.)) %>%
+  mutate(B = summary(m)$coeff[2]) %>%
+  select(-m)
+b1
+```
+
+
+## (b)
+*Using the estimated effect sizes, compute polygenic risk score (PRS) of trait
+1 in the samples of trait 2 (i.e. we predict the trait 1 phenotype in these
+samples).*
+
+```{r}
+prs<-as.matrix(trait2[,3:6]) %*% as.matrix(b1[,2], ncol=1)
+head(prs)
+```
+
+
+### (c)
+*Compute the correlation of the PRS with the phenotypes of trait 2.*
+
+```{r}
+cor(trait2$phenotype, prs)
+```
 
 
 ## Problem 3
-We will answer some conceptual questions about annotating functions of SNPs:
+*We will answer some conceptual questions about annotating functions of SNPs:*
 
-## (a)
-Evolutionary constraint across species (e.g. PhastCons or GERP) is often used
+### (a)
+*Evolutionary constraint across species (e.g. PhastCons or GERP) is often used
 to define functional sequences. For a researcher studying human cognitive
-trait, what do you think is the limitation of using this annotation?
+trait, what do you think is the limitation of using this annotation?*
 
-## (b)
-Suppose we have a large number of whole-genome sequences of human, can you use
+### (b)
+*Suppose we have a large number of whole-genome sequences of human, can you use
 this dataset to improve annotation of functional non-coding sequences? You just
-need to explain some general ideas.
+need to explain some general ideas.*
 
-## (c)
-We have enhancer data (e.g. ATAC-seq) in a tissue related to disease of
+### (c)
+*We have enhancer data (e.g. ATAC-seq) in a tissue related to disease of
 interest. In addition, we have a list of transcription factors (TFs) likely
 important in this tissue from prior studies and we know the motifs of all these
 TFs. Can you propose a better annotation combining enhancer data with TF
 information? (Hint: most variants, even within an enhancer, are likely not
-functional.)
+functional.)*
 
-## (d)
-Now suppose we also have experimental data that identified several thousand of
+### (d)
+*Now suppose we also have experimental data that identified several thousand of
 SNPs with likely regulatory effects (e.g. from large-scale reporter assay). Can
 you use this dataset to provide an even better functional annotation? (Hint:
-use Supervised Learning.)
+use Supervised Learning.)*
 
 
 # Lab 6
