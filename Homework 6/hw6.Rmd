@@ -1,0 +1,518 @@
+---
+title: "Homework 6"
+author: "Ansel George"
+output: pdf_document
+---
+
+
+```{r, message=F}
+library(tidyr)
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(qqman)
+```
+
+# Problem 1
+
+*In this exercise, we derive the standard error of the fixed effect estimator in
+meta-analysis. Let $Y_i$ be the estimated effect in study $i$, and its variance
+$V_i$. The estimator under the fixed effect model is given by:*
+
+\begin{equation}
+\hat\mu = \sum_i \frac{w_i}{\sum_i w_i} Y_i
+\end{equation}
+
+*where $w_i = \frac{1}{V_i}$. Show that $\hat\mu$ is the unbiased estimator
+of the true effect $\mu$ (i.e. mean of $\hat\mu$ is $\mu$), and the standard
+error of $\hat\mu$ is $\frac{1}{\sqrt{\sum_i w_i}}$. (Hint: $Y_i$ follows normal
+distribution; use the properties of normal distribution.)*
+
+\begin{align}
+E\big(\hat\mu\big) &= E\Big(\sum_i \frac{w_i}{\sum_i w_i} Y_i\Big) \\
+  &= \frac{1}{\sum_i w_i} \sum_i E(w_i Y_i) \\
+  &= \frac{1}{\sum_i w_i} \sum_i w_i E(Y_i) \\
+  &= \frac{1}{\sum_i w_i} \sum_i w_i \mu \\
+  &= \frac{1}{\sum_i w_i} \mu \sum_i w_i \\
+  &= \frac{\sum_i w_i}{\sum_i w_i} \mu \\
+  &= \mu
+\end{align}
+
+$E\big(\hat\mu\big) = \mu$, so $\hat\mu$ is unbiased.
+
+\begin{align}
+Var\big(\hat\mu\big) &= Var\Big(\sum_i \frac{w_i}{\sum_i w_i} Y_i\Big) \\
+  &= \sum_i Var\Big( \frac{w_i}{\sum_i w_i} Y_i \Big) \\
+  &= \sum_i \frac{{w_i}^2}{\big(\sum_i w_i \big)^2} Var( Y_i ) \\
+  &= \sum_i \frac{{w_i}^2}{\big(\sum_i w_i \big)^2} V_i \\
+  &= \sum_i \frac{{w_i}^2}{\big(\sum_i w_i \big)^2} \frac{1}{w_i} \\
+  &= \sum_i \frac{{w_i}}{\big(\sum_i w_i \big)^2} \\
+  &= \frac{\sum_i {w_i}}{\big(\sum_i w_i \big)^2} \\
+  &= \frac{1}{\sum_i w_i } \\
+\implies SE\big(\hat\mu\big) &= \frac{1}{\sqrt{\sum_i w_i} } 
+\end{align}
+
+
+# Problem 2
+
+*A meta-analysis is performed on GWAS of bipolar disorder, and the table below
+lists the effect sizes, measured by log odds ratio, and its standard errors
+(SE) of a SNP in five studies.*
+
+| Study   | A   | B    | C   | D   | E    | 
+| ---     | --- | ---  | --- | --- | ---  |
+| log(OR) | .03 | .1   | .02 | .03 | .08  | 
+| SE      | .04 | .025 | .04 | .03 | .025 | 
+
+## (a)
+*Use Fisher's method to determine the significance of the SNP using 5 studies.*
+
+The log-odds ratio is approximately normally distributed, so p-values for each
+test can be computed from a null distribution with mean 0 and standard
+deviation equal to the standard error.
+
+P-values are then combined according the Fisher's method and tested for
+significance against a $\chi^2$ distribution with $2 * \textrm{number of
+studies}$ degrees of freedom.
+
+```{r}
+lor <- c(.03, .1, .02, .03, .08)
+se <- c(.04, .025, .04, .03, .025)
+
+# pvals <- 1-pnorm(lor, mean=0, sd=se) # 1-tailed
+pvals <- 2*pnorm(lor, mean=0, sd=se, lower.tail=F) # 2-tailed
+chi2 <- -2*sum(log(pvals))
+1-pchisq(chi2, 10) # 2*5 degrees of freedom
+```
+
+The $\chi^2$ statistic is much greater than 10 degrees of freedom (p-value
+4.907517e-05), so the combined study reveals strong significant association of
+the SNP to the phenotype.
+
+
+## (b)
+
+*Analyze the data using Fixed Effects model. Provide both the summary effect and
+its p-value (using the standard error derived in the previous problem). Compare
+the result with Fisher's method, and explain in plain words which one gives
+more significant findings (Hint: Fisher's method weighs all studies equally).*
+
+```{r}
+computeFixedEffect <- function(y, w) {
+  return(list(mu=sum(w*y/sum(w)), se=1/sqrt(sum(w))))
+}
+
+lor <- c(.03, .1, .02, .03, .08)
+se <- c(.04, .025, .04, .03, .025)
+
+res <- computeFixedEffect(lor, (1/se)^2)
+res$mu
+res$se
+
+# pnorm(res$mu, mean=0, sd=res$se, lower.tail=F) # 1-tailed
+2*pnorm(res$mu, mean=0, sd=res$se, lower.tail=F) # 2-tailed
+```
+
+The p-value for the effect size of the SNP (2.266993e-06) is lower than that
+obtained by Fisher's method. This is due to the fixed effects model more
+heavily weighting studies with smaller variance, which in this example
+corresponded to studies with greater effect size and thus high power. Fisher's
+method weights each study equally, so a study with a highly significant result
+is weighted the same as one with a higher variance relative to effect size.
+
+
+# Problem 3
+
+*Given the genotype data of 503 individuals from the 1000 Genomes Project at 95
+loci from chromosome 19 (see attached zip file with the genotype data in both
+VCF and PLINK format), your goal is to perform simple fine-mapping analysis on
+this region using simulations. Your simulation procedure consists of these
+steps:*
+
+1. *Standardize genotypes: making the genotype of each SNP mean 0 and variance
+   1.*
+2. *Choose a causal variant $j$, and specify its effect size $\beta_j$.*
+3. *Simulate the phenotype data of individual $i$ by: $Y_i = X_{ij}\beta_j +
+   \epsilon_i$, where $X_{ij}$ is the $j$-th SNP of sample $i$, and $\epsilon_i
+   \sim N(0,1)$.*
+4. *Perform single SNP association test of phenotype against each SNP (using
+   the simple linear regression), and obtain Z score of each SNP.*
+
+*Implement the simulation procedure above. For each value of $\beta_j =
+0.1,0.2,0.3,0.4,0.5$, repeat the last two steps 100 times, and compute the
+probability that the top SNP is the causal variant. Plot its values vs.
+$\beta_j$ and explain/comment on the results. You will need to submit both your
+code and the results.*
+
+
+`shuf` was used to pick a random SNP from the EUR dataset and piped to a file
+called 'locus.txt.' Then, a second column to the file was added containing the
+effect size for the randomly picked variant.
+
+The GCTA simulation was run with heritability 0.6 and 100 replicates for each
+causal effect size.
+
+```{bash, eval=F}
+cut -f 2 ../../eur_kg_chr19.bim | shuf | head -1 > locus.txt
+sed -i "s/^\(.*\)$/\1  0.1/" locus.txt # repeat for effect size 0.2, 0.3, etc.
+```
+
+SNP rs11665790 was set to be causal with effect size $\beta \in
+\{0.5, .1, .2, .3, .4, .5, .6, .7, .8, .9\}$.
+
+```{bash, eval=F}
+# Each directory contains replicates corresponding to a GWAS with a causal
+# variant having one specific effect size.
+for dir in *; do
+  if [ -d ${dir} ]; then
+    cd "$dir"
+    gcta --bfile ../../eur_kg_chr19 --simu-qt --simu-causal-loci locus.txt \
+      --simu-hsq 0.6 --simu-rep 100 --out pheno
+    plink --bfile ../../eur_kg_chr19 --all-pheno --allow-no-sex --pheno \
+      pheno.phen --assoc --out plink_gwas
+    cd ../
+  fi
+done
+```
+
+```{r}
+# Not used
+getTopSNPs <- function(filename) {
+  qassoc <- read.table(filename, header=T, stringsAsFactors=F)
+  topsnps <- qassoc %>% arrange(P)
+  return(topsnps)
+}
+
+# Not used
+getTopSNP <- function(filename) {
+  qassoc <- read.table(filename, header=T, stringsAsFactors=F)
+  topsnp <- qassoc %>% arrange(P) %>% head(1)
+  return(topsnp)
+}
+
+# Not used
+getSNPTable <- function(path, n) {
+  filename <- paste(path, "/plink_gwas.P", 1, ".qassoc", sep="")
+  snpdata <- getTopSNP(filename)
+
+  for (i in 2:n) {
+    filename <- paste(path, "/plink_gwas.P", i, ".qassoc", sep="")
+    snpdata <- rbind(snpdata, getTopSNP(filename))
+  }
+  return(snpdata)
+}
+
+checkTopSNP <- function(filename, snp) {
+  qassoc <- read.table(filename, header=T, stringsAsFactors=F)
+  topsnps <- qassoc[min(qassoc$P)==qassoc$P,]
+  return(snp %in% topsnps$SNP)
+}
+
+checkTopSNPs <- function(path, n, snp) {
+  filename <- paste(path, "/plink_gwas.P1.qassoc", sep="")
+  snpdata <- c(checkTopSNP(filename, snp))
+
+  for (i in 2:n) {
+    filename <- paste(path, "/plink_gwas.P", i, ".qassoc", sep="")
+    snpdata <- cbind(snpdata, checkTopSNP(filename, snp))
+  }
+  return(snpdata)
+}
+```
+
+After simulating the data with GCTA and then running GWAS with plink, the data
+were analysed to check if the predefined SNP is in fact the top causal variant
+(i.e. lowest p-value). For some reason, multiple SNPs can have the same
+p-value, so the code above checks whether the desired SNP is in the set of SNPs
+that have the lowest p-values.
+
+```{r}
+snp <- "rs11665790"
+replicates <- 100
+
+beta05 <- checkTopSNPs("attempt2/effectsize-05", replicates, snp)
+beta1 <- checkTopSNPs("attempt2/effectsize-1", replicates, snp)
+beta2 <- checkTopSNPs("attempt2/effectsize-2", replicates, snp)
+beta3 <- checkTopSNPs("attempt2/effectsize-3", replicates, snp)
+beta4 <- checkTopSNPs("attempt2/effectsize-4", replicates, snp)
+beta5 <- checkTopSNPs("attempt2/effectsize-5", replicates, snp)
+beta6 <- checkTopSNPs("attempt2/effectsize-6", replicates, snp)
+beta7 <- checkTopSNPs("attempt2/effectsize-7", replicates, snp)
+beta8 <- checkTopSNPs("attempt2/effectsize-8", replicates, snp)
+beta9 <- checkTopSNPs("attempt2/effectsize-9", replicates, snp)
+
+Beta <- c(.05, .1, .2, .3, .4, .5, .6, .7, .8, .9)
+Means <- c(mean(beta05), mean(beta1), mean(beta2), mean(beta3), mean(beta4),
+           mean(beta5), mean(beta6), mean(beta7), mean(beta8), mean(beta9))
+SDs <- c(sd(beta05), sd(beta1), sd(beta2), sd(beta3), sd(beta4), sd(beta5),
+         sd(beta6), sd(beta7), sd(beta8), sd(beta9))
+
+f <- data.frame(Beta, Means, SDs)
+```
+
+```{r}
+ggplot(f) + aes(x=Beta, y=Means) + geom_point()
+
+# And with error bars...
+ggplot(f) + aes(x=Beta, y=Means) + geom_point() +
+  geom_errorbar(aes(ymin=Means-2*SDs, ymax=Means+2*SDs), width=.01) 
+```
+
+The error bars correspond to a 95\% confidence interval, which for estimates
+for Bernoulli variable $p$ is roughly $\pm 2 * \sqrt{p (1-p)}$. The point here
+is that there is much variation, too much to make any strong claim about
+relationships between $\beta$ and the probability of the preset SNP being the
+top causal SNP.
+
+If one were to attempt to fit a linear model to the data:
+
+```{r}
+model <-lm(Means ~ Beta)
+summary(model)
+```
+
+The estimate for the regression coefficient is not significant.
+
+
+# Problem 4
+
+*Simulate a polygenic trait with different proportion of causal variants (5\%,
+10\%, for example) and levels of heritability (0.20, 0.40, 0.90, for example)
+following the R markdown document contained in the following link:
+\url{https://storage.googleapis.com/hgen471/hgen471-hw6-polygenic-simulation.zip}*
+
+```{r}
+makeGWAS <- function(propC, h2, seednumber) {
+  plinkname <- paste0("./",bin.dir,"plink")
+  header0 <- "hapmap-AFR-ch1" 
+  bedheader <- paste0(data.dir,header0)
+
+  seednumber <- 10 # FIXME
+  outheader <- paste0(out.dir,header0,"-",seednumber)
+
+  from_scratch <- FALSE
+
+  popinfo <- read_tsv(paste0(data.dir,"relationships_w_pops_051208.txt"))
+
+  bimdata <- read_tsv(paste0(bedheader, ".bim"),col_names = FALSE)
+  names(bimdata) <- c("chr","rsid","dis","pos","A1","A2")
+  Mt <- nrow(bimdata)
+  MC <- round(propC * Mt) ## number of causal SNPs
+
+  set.seed(seednumber) ## we want to get the same SNPs each time we run this
+  indC <- sample(1:Mt, MC) ## select Mc SNPs to be simulated as causal
+
+  set.seed(seednumber + 1)
+  betaC <- rnorm(MC,mean=0, sd=1)
+  betaC[1:3] <- 10*max(betaC)
+
+  weightdata <- bimdata[indC,] %>% select(rsid,A1) 
+  weightdata$betas <- betaC
+  weightfile <- paste0(out.dir, "weights-seed-",seednumber,".txt")
+  write_tsv(weightdata,path=weightfile)
+
+  comm <- paste0(bin.dir, "plink --bfile ", bedheader, " --score ", weightfile,
+                " header sum --out ", out.dir, "polyscore-seed", seednumber)
+  system(comm)
+
+  PSdata <- read_table2(paste0(out.dir,"polyscore-seed",seednumber,".profile"))
+
+  sigepsi2 <- (1-h2)/h2 * var(PSdata$SCORESUM)
+
+  phenofile <- paste0(outheader,".txt")
+  nsamp <- nrow(PSdata)
+  set.seed(seednumber + 2); ## use seednumber + 2 to get reproducible simulations
+  epsilon <- rnorm( nsamp, mean=0, sd=sqrt(sigepsi2) )
+  PSdata <- PSdata %>% mutate(PHENO = SCORESUM + epsilon)
+  write_tsv(PSdata %>% select(FID,IID,PHENO,SCORESUM),path=paste0(phenofile))
+
+  comm <- paste0(plinkname, " --bfile ", bedheader, " --assoc --pheno ", phenofile,
+                " --pheno-name PHENO ", " --out ", outheader)
+  system(comm)
+
+  qassoc <- read_table(paste0(outheader, ".qassoc"))
+
+  return(list(q=qassoc, w=weightdata))
+}
+```
+
+```{r, message = FALSE}
+#
+# Run the GWAS for the six propC, h2 combinations.
+#
+
+# Set paths
+bin.dir <- "hgen471/bin/"
+data.dir <- "hgen471/data/"
+out.dir <- "hgen471/out/"
+gist.dir <- "hgen471/rfunctions/"
+source(paste0(gist.dir, "qqunif.r")) ## load qqunif function from the gist folder
+
+r <- makeGWAS(.05, .2, 10)
+qassoc_1 <- r$q
+weightdata_1 <- r$w
+
+r <- makeGWAS(.05, .4, 20)
+qassoc_2 <- r$q
+weightdata_2 <- r$w
+
+r <- makeGWAS(.05, .9, 30)
+qassoc_3 <- r$q
+weightdata_3 <- r$w
+
+r <- makeGWAS(.1, .2, 40)
+qassoc_4 <- r$q
+weightdata_4 <- r$w
+
+r <- makeGWAS(.1, .4, 50)
+qassoc_5 <- r$q
+weightdata_5 <- r$w
+
+r <- makeGWAS(.1, .9, 60)
+qassoc_6 <- r$q
+weightdata_6 <- r$w
+```
+
+```{r}
+qqunif.plot( qassoc_1$P,main = paste0("sim with h2 = ",round(.2,2),", propC = ",round(.05,2)) )
+weightdata_1 %>% head(3)
+qassoc_1 %>% filter(SNP %in% weightdata_1$rsid[1:3])
+
+qqunif.plot( qassoc_2$P,main = paste0("sim with h2 = ",round(.4,2),", propC = ",round(.05,2)) )
+weightdata_2 %>% head(3)
+qassoc_2 %>% filter(SNP %in% weightdata_2$rsid[1:3])
+
+qqunif.plot( qassoc_3$P,main = paste0("sim with h2 = ",round(.9,2),", propC = ",round(.05,2)) )
+weightdata_3 %>% head(3)
+qassoc_3 %>% filter(SNP %in% weightdata_3$rsid[1:3])
+
+qqunif.plot( qassoc_4$P,main = paste0("sim with h2 = ",round(.2,2),", propC = ",round(.1,2)) )
+weightdata_4 %>% head(3)
+qassoc_4 %>% filter(SNP %in% weightdata_4$rsid[1:3])
+
+qqunif.plot( qassoc_5$P,main = paste0("sim with h2 = ",round(.4,2),", propC = ",round(.1,2)) )
+weightdata_5 %>% head(3)
+qassoc_5 %>% filter(SNP %in% weightdata_5$rsid[1:3])
+
+qqunif.plot( qassoc_6$P,main = paste0("sim with h2 = ",round(.9,2),", propC = ",round(.1,2)) )
+weightdata_6 %>% head(3)
+qassoc_6 %>% filter(SNP %in% weightdata_6$rsid[1:3])
+```
+
+
+* *Perform GWAS for each combination of $h^2$ and proportion of causal
+  variants. Do you find inflation of p-values? If so, can you explain why?*
+
+There is increasing inflation of p-values as the heritability increases and as
+the proportion of causal variants increases.
+
+Under the mixed effects model, the regressions of genotype on phenotype follow
+a normal distribution $\beta \sim N(0, \frac{\sigma_a^2}{M})$, where
+$\sigma_a^2$ is proportional to genetic variance (and thus heritability given a
+constant) and $M$ is the number of causal SNPs.
+
+When the heritability increases, the variance of the mixed effects distribution
+increases, meaning that more regressions on the phenotype will have large
+magnitudes and correspondingly low p-values. Under the null model, the expected
+distribution of p-values is uniform, so when high heritability causes an
+inflation of low p-values, the distribution of p-values gets skewed toward 0.
+The q-q plot orders -log10(p-values) and plots the observed values against the
+expected, so artificially low p-values caused by high polygenicity and
+heritability will cause a global inflation of p-values observed in the above
+graphs.
+
+The trend with proportion of causal variants can be explained by the method by
+which the phenotype value is generated. The environmental component is computed
+from the variance of the SCORESUM, so when there are more causal variants, the
+environmental variance increases. This increases the variance of the phenotype,
+which the simulation computes by adding the genetic and environmental
+component. Larger phenotypic variance means that the p-values for any given
+$\beta$ will be smaller, so the magnitude of the inflation in the q-q plot will
+be diminished when compared to smaller numbers of causal variants given some
+heritability.
+
+Another contributor to the proportion-inflation effect is that the variance of
+$\beta_j$ is inversely proportional to the number of causal SNPs $M$, so when
+the proportion of causal variants increases given a constant heritability, the
+variance of the distribution decreases. This causes the values of $\beta$s to
+be less extreme and their respective p-values to be higher. Therefore, when $M$
+increases, the degree to which the p-values are inflated on the q-q plot
+diminishes.
+
+
+* *The code is adding three large effects variants. Are they significant?*
+
+The three large effect sizes set in the simulation are not always found to be
+significant.
+
+
+\begin{center}
+  \textbf{Variant 1 (rs12078697) p-values:}
+\end{center}
+
+| h2 \\ propC | .1          | .05        |
+| ---         | ---         | ---        |
+| .9          | 0.000000101 | 3.40e-12   |
+| .4          | 0.000912    | 0.00000382 |
+| .2          | 0.0300      | 0.00373    |
+
+
+\begin{center} 
+  \textbf{Variant 2 (rs17131238) p-values:}
+\end{center}
+
+| h2 \\ propC | .1         | .05      |
+| ---         | ---        | ---      |
+| .9          | 0.00000711 | 6.14e-10 |
+| .4          | 0.00543    | 0.000108 |
+| .2          | **0.0714** | 0.00989  |
+
+
+\begin{center} 
+  \textbf{Variant 3 (rs4950097) p-values:}
+\end{center}
+
+| h2 \\ propC | .1       | .05      |
+| ---         | ---      | ---      |
+| .9          | 0.000167 | 8.76e-7  |
+| .4          | 0.00607  | 0.000473 |
+| .2          | 0.0399   | 0.00956  |
+
+
+When heritability is low and there is a larger proportion of causal variants,
+the GWAS is not as effective at assigning large true causal effects to SNPs
+with disproportionately large effect sizes.
+
+Note that these p-values are unadjusted. After a Bonferroni correction (89,009
+SNPs and $\alpha=.05$), the only significant results are variants 1 and 2 when
+$h^2=.9$. Due to overall p-value inflation, using FDR would be less
+conservative likely assign greater significance to the other SNPs.
+
+* *You may want to change the seednumber in to generate different simulations.*
+
+
+# Problem 5
+
+*Show analytically that variance of epsilon defined in the R markdown leads to
+the heritability $h^2$. i.e. show that:*
+
+\begin{equation}
+\textrm{Var}(\epsilon) = \frac{1-h^2}{h^2}\textrm{Var}\big( \sum_k \beta_k X_k \big)
+\end{equation}
+
+*Hint: use that $h^2 = \frac{\textrm{Var}\big(\sum_k \beta_k X_k
+\big)}{\textrm{Var}(Y)}$ and knowing that $\textrm{Var}(Y) = \textrm{Var}\big(
+\sum_k \beta_k X_k \big) + \textrm{Var}(\epsilon)$.*
+
+\begin{align}
+h^2 &= \frac{\textrm{Var}\big(\sum_k \beta_k X_k \big)}{\textrm{Var}(Y)} \\
+\implies \textrm{Var}(Y) &= \frac{\textrm{Var}\big(\sum_k \beta_k X_k \big)}{h^2}
+\end{align}
+
+\begin{align}
+\textrm{Var}(Y) &= \textrm{Var}\big(\sum_k \beta_k X_k \big) + \textrm{Var}(\epsilon) \\
+\frac{\textrm{Var}\big(\sum_k \beta_k X_k \big)}{h^2} &= \textrm{Var}\big(\sum_k \beta_k X_k \big) + \textrm{Var}(\epsilon) \\
+\implies \textrm{Var}(\epsilon) &= \frac{\textrm{Var}\big(\sum_k \beta_k X_k \big)}{h^2} - \textrm{Var}\big(\sum_k \beta_k X_k \big) \\
+  &= \big( \frac{1}{h^2} - 1 \big) \textrm{Var}\big(\sum_k \beta_k X_k \big)  \\
+  &= \frac{1-h^2}{h^2} \textrm{Var}\big(\sum_k \beta_k X_k \big)
+\end{align}
