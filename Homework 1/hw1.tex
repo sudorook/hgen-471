@@ -1,0 +1,300 @@
+%!TEX encoding = UTF-8 Unicode
+
+\documentclass{essay}
+\usepackage[margin=1in]{geometry}
+\usepackage{mathtools}
+\usepackage{minted}
+
+\begin{document}
+\sffamily
+
+\setsmallheader{Homework 1}{HGEN 47100}{Ansel George}
+\setbodyheader{Ansel George}{Homework 1}
+
+\begin{essaystyle}
+
+\essaysection{Problem Set 1}
+\vspace{.5em}
+
+\textbf{1.} Early onset Alzheimer’s disease is very rare; for illustrative
+purposes, assume it is 0.1\% among adults aged 30--60. Rare variants in 3 genes,
+APP, PSEN1 and PSEN2 have been identified as causing early onset AD in a
+dominant fashion, With $P(AD | \textrm{any of the three variants}) = 1$. Early onset AD
+can also be caused by head injury; many other non-genetic factors have been
+suggested. In a series of 101 cases of early onset AD, only 7 (or approximately
+7\%) were found to have these variants in APP, PSEN1 or PSEN2; that is, the
+attributable risk due to the three rare variants is low. For simplicity, assume
+that the probability of variants in these 3 genes is so rare that we can assume
+$P(\textrm{no variant in any gene}) \approx 1$. Let the disease allele D symbolize a
+variant in any one of the three genes, d is no variant, and Y=1 means AD
+present. Estimate the probability of a phenocopy, $P(Y=1 | dd)$ (also known as
+phenocopy rate) for these genes combined, using the data given and Bayes Rule.
+
+
+$P(AD) = .001$ \\
+$P(\textrm{any of the three variants} | AD) = P(D|AD) = \frac{7}{101} = 0.06930693$ \\
+$P(\textrm{no variant in any gene}) = P(\overline{D}) = P(dd) \approx 1$\\
+
+\begin{align}
+  P(Y=1 | dd) &= P(AD | dd) = \frac{P(dd|AD)P(AD)}{P(dd)} \\
+  &= \frac{(1-\frac{7}{101}).001}{1} \\
+  &\approx .000931
+\end{align}
+
+
+\textbf{2.} Suppose we are dealing with a quantitative recessive trait, which
+is distributed as $N(\mu,1)$ when there are two variants, and $N(0,1)$ otherwise.
+Calculate the probability that a randomly selected person with two variants has
+a trait higher than a person with one or no variants, when $\mu=0.5$, and when
+$\mu=2$.
+
+Let $X_{1} \sim \mathrm{N}(\mu,1)$ and $X_{2} \sim \mathrm{N}(0,1)$.
+
+\begin{align}
+  p(X_{1} > X_{2}) &= p(X_{1} - X_{2} > 0) \\
+  &= p(Z > 0)
+\end{align}
+
+The new variable $Z = X_{2} - X_{1}$ follows normal distribution
+$\mathrm{N}(\mu - 0, 1 + 1)=\mathrm{N}(\mu, 2)$. The variances can simply be
+added because they are equivalent for $X_{1}$ and $X_{2}$.
+
+Therefore, to find $p(Z > 0)$, use the CDF for a Normal distribution (F).
+
+\begin{align}
+  p(Z > 0) &= 1 - p(Z < 0) \\
+  &= 1 - p(Z < 0) \\
+  &= 1 - F(\mu, 2)
+\end{align}
+
+For $\mu=.5$:
+
+\begin{minted}{r}
+1 - pnorm(0, mean=.5, sd=sqrt(2))
+[1] 0.6381632
+\end{minted}
+
+For $\mu=2$:
+
+\begin{minted}{r}
+1 - pnorm(0, mean=2, sd=sqrt(2))
+[1] 0.9213504
+\end{minted}
+
+\textbf{3.} Assume the genotypes AA, Aa and aa have frequencies u, v and w in a
+randomly mating population. By considering all possible outcomes of all
+possible mating types, show that the offspring genotypes follow HWE with the
+same allele frequencies in both generations.
+
+\begin{tabular}{ l | c c c }
+  & AA & Aa & aa \\
+  \hline
+  AA & AA & \begin{tabular}{@{}c@{}} $\frac{1}{2}$AA \\ $\frac{1}{2}$Aa \end{tabular} & Aa \\
+  Aa & \begin{tabular}{@{}c@{}} $\frac{1}{2}$AA \\ $\frac{1}{2}$Aa \end{tabular}  & \begin{tabular}{@{}c@{}} $\frac{1}{4}$AA \\ $\frac{1}{2}$Aa \\ $\frac{1}{4}$Aa \end{tabular} & \begin{tabular}{@{}c@{}} $\frac{1}{2}$Aa \\ $\frac{1}{2}$aa \end{tabular}  \\
+  aa & Aa & \begin{tabular}{@{}c@{}} $\frac{1}{2}$Aa \\ $\frac{1}{2}$aa \end{tabular} & aa \\
+\end{tabular}
+
+Using the above set of possible crosses and the probabilities $u$, $v$, and
+$w$, the updated frequencies $u^\prime$, $v^\prime$, and $w^\prime$ are as
+follows:
+
+\begin{align}
+  u^\prime &= u^2 + \frac{1}{4}v^2 + uv \\
+  v^\prime &= 2uw + uv + wv + \frac{1}{2}v^2 \\
+  w^\prime &= w^2 + \frac{1}{4}v^2 + vw
+\end{align}
+
+In Hardy-Weinberg equilibrium, the genotype frequencies are equal to the
+product of allele frequencies. The allele frequencies are:
+
+\begin{align}
+  p_A &= u + \frac{1}{2}v \\
+  p_a &= w + \frac{1}{2}v
+\end{align}
+
+Using expressions for $p_A$ and $p_a$, the HW frequencies for $u$, $v$, and $w$ are expected to be:
+
+\begin{align}
+u_{HW} &= p_A^2 \\
+  &= (u + \frac{1}{2}v)^2 \\
+  &= u^2 + uv + \frac{1}{4}v^2 \\
+  v_{HW} &= 2p_A p_a \\
+  &= 2(u + \frac{1}{2}v)(w + \frac{1}{2}v) \\
+  &= 2(uw + \frac{1}{2}vw + \frac{1}{2}vu + \frac{1}{4}v^2) \\
+  &= 2uw + vw + vu + \frac{1}{2}v^2 \\
+w_{HW} &= p_a^2 \\
+  &= (w + \frac{1}{2}v)^2 \\
+  &= w^2 + wv + \frac{1}{4}v^2
+\end{align}
+
+Note that $u^\prime = u_{HW}$, $v^\prime = v_{HW}$, and $w^\prime = w_{HW}$, so
+the offspring population is in Hardy-Weinberg equilibrium.
+
+The allele frequencies for the offspring are as follows:
+
+\begin{align}
+  p_A^\prime &= u^\prime + \frac{1}{2}v^\prime \\
+  &= u^2 + uv + \frac{1}{4}v^2 + \frac{1}{2} (2uw + vw + vu + \frac{1}{2}v^2) \\
+  &= u^2 + uv + \frac{1}{4}v^2 + uw + \frac{1}{2} vw + \frac{1}{2} vu + \frac{1}{4}v^2 \\
+  &= u(v+w+u) + v(\frac{1}{2} v +\frac{1}{2}w + \frac{1}{2}u) \\
+  &= u + \frac{1}{2} v \\
+  &= p_A \\
+  p_a^\prime &= w^\prime + \frac{1}{2}v^\prime \\
+  &= w^2 + wv + \frac{1}{4}v^2 + \frac{1}{2} (2uw + vw + vu + \frac{1}{2}v^2 ) \\
+  &= w^2 + wv + \frac{1}{4}v^2 + uw + \frac{1}{2} vw + \frac{1}{2} vu + \frac{1}{4}v^2 \\
+  &= w(v+w+u) + v(\frac{1}{2} v +\frac{1}{2}w + \frac{1}{2}u) \\
+  &= w + \frac{1}{2} v \\
+  &= p_a
+\end{align}
+
+Therefore, the allele frequencies remain unchanged.
+
+\textbf{4.} Suppose a population of 2000 chromosomes; 1000 carry an A allele at
+a marker and 1000 carry a. Now suppose a disease mutation ($+$) arises on one
+chromosome bearing an A allele, and all the rest of the chromosomes have ($-$) at
+that location.
+
+\indent\textbf{a)} What are the marginal frequencies at the marker and Disease
+Susceptibility Locus (DSL)?
+
+Markers: $p_A = .5$ and $p_a = (1-p_A) = .5$
+
+Disease locus: $p_+ = \frac{1}{2000} = .0005$ and $p_- = (1-p_+) = \frac{1999}{2000} = .9995$
+
+\textbf{b)} Fill in the 2x2 table of marker and disease mutation haplotypes.
+
+\begin{tabular}{ l | c c }
+      & A    & a \\ \hline
+  $+$ & A$+$ & a$+$ \\
+  $-$ & A$-$ & a$-$ \\
+\end{tabular}
+
+\textbf{c)} What is D for this table?
+
+$D = p_{A+} - p_{A}p_{+} = \frac{1}{2000} - \frac{1}{2}\frac{1}{2000} = .00025$
+
+\textbf{d)} What is the correlation between the marker and DSL?
+
+% $r^2 = \frac{Cov(A,+)}{Var(A)Var(+)} = \frac{\frac{1}{1000}\big((1-.001)(1-.5) + (1000-1)(0-.001)(0-.5) \big)}{(.5)(1-.5)(.001)(1-.001)}$
+% $r^2 = 0.000999$
+% $r = 0.03160696$
+
+$r = \frac{D}{\sqrt{p_A p_a p_+ p_-}} = \frac{.00025}{\sqrt{.5 * .5 * .0005 * .9995}} = 0.02236627$
+
+\textbf{e)} Repeat the questions above, now assuming only 100 chromosomes, one
+mutation on the same haplotype as an A allele, and a 50/50 split of A and a
+alleles.
+
+Markers: $p_A = .5$ and $p_a = (1-p_A) = .5$
+
+Disease locus: $p_+ = .005$ and $p_- = (1-p_+) = .995$
+
+$D = p_{A+} - p_{A}p_{+} = \frac{1}{200} - \frac{1}{2}\frac{1}{200} = .0025$
+
+$r = \frac{D}{\sqrt{p_A p_a p_+ p_-}} = \frac{.0025}{\sqrt{.5 * .5 * .005 * .995}} = 0.07088812$
+
+\essaysection{Lab 1}
+\vspace{.5em}
+
+\textbf{1.} What command would give you a detailed but human-readable list of the files
+in a directory in reverse-order of when they have last been modified?
+
+\begin{minted}{bash}
+ls -rmathl
+\end{minted}
+
+
+\textbf{2.} Step 2 is composed of multiple commands. Use the descriptions of the
+commands (Section 1.1) and the man command to describe Step 2
+command-by-command.
+
+\textit{cat}: print the contents of a file to the terminal \\
+\textit{|}: pipe the output of the previous command to the next one \\
+\textit{sort}: sort a text stream \\
+\hspace{.5em} -k: sort by value (k2 $\rightarrow$ 2nd column) \\
+\hspace{.5em} -n: sort numerically \\
+\hspace{.5em} -r: reverse output \\
+\textit{head}: show the first 10 lines of output \\
+\textit{>}: redirect standard output somewhere else \\
+
+
+\textbf{3.} How would you modify this command if you only wanted the top three?
+
+Use \mintinline{bash}{head -n3} instead.
+
+\begin{minted}{bash}
+cat example.chr22.map | sort -k2nr | head -n3 > top_ten.map
+\end{minted}
+
+
+\textbf{4.} Find the golden nugget! Write a new script named extract.sh where the first
+line of each of the top\_ten replicate files is written into a single file named
+extract.txt. Note: you may want to refer to Section 1.1 to find a command that
+can select single lines.
+
+\inputminted[linenos,numbersep=.5em]{bash}{extract.sh}
+
+
+\textbf{5.} What is the difference between using one versus two question marks?
+
+\textit{?<command>}: opens the standard documentation for a object/method \\
+\textit{??<string>}: do a regex match of <string> against the names and
+descriptions of defined objects/methods \\
+
+
+\textbf{6.} At first glance the current plot may be a bit misleading because of the
+differences in scale between the axes. Use the query function learned in
+Section 2.2 to fix the scale on the axes so that both axis range from 0 to 100.
+Note that the necessary arguments may take vectors.
+
+\begin{minted}{r}
+plot(new_data$Bob, new_data$Steve, main="Cheeseburgers Eaten",
+     xlab="Bob", ylab="Steve", xlim=c(0,100), ylim=c(0,100))
+\end{minted}
+
+
+\textbf{7.} You want a quick estimate on how often you will win the dice game craps on
+the first roll. You do this by constructing 500 random rolls (2 dice/roll) and
+looking at the results. Use the sample function to sample the numbers 1 to 6
+with replacement 1000 times, naming this vector ``dice''. Take this vector and
+make it into a matrix named ``pairs'' with 2 columns and 500 rows, simulating the
+500 rolls. Make a new vector summing the first and second rows named ``rolls''.
+If 7 and 11 are the two rolls for victory on the first roll, estimate the
+probability of winning from your 500-roll sample. Hint: The function table
+might be useful in this problem.
+
+\begin{minted}[linenos,numbersep=.5em]{r}
+set.seed(123)
+dice = sample(1:6, 1000, replace=TRUE)
+pairs = matrix(dice, nrow=500, ncol=2)
+rolls = pairs[,1] + pairs[,2]
+sum(rolls == 11 | rolls == 7) / length(rolls)
+
+[1] 0.204
+\end{minted}
+
+
+\textbf{8.} In the for-loop that accomplishes Steps 3 \& 4, why don't we have to specify
+the mean when we are filling the object ``mean\_zero''? What standard deviation
+did we set for these normally-distributed values?
+
+\mintinline{r}{rnorm} by default assumes mean of 0 and standard deviation of 1.
+
+
+\textbf{9.} How would you write a command to take the standard deviation of all the
+replicate means from the ``all\_means'' array?
+
+To compute the standard deviation of means for each sampling distribution separately:
+\begin{minted}[linenos,numbersep=.5em]{r}
+sd_zero = sd(all_means[1,])
+sd_one = sd(all_means[2,])
+\end{minted}
+
+If instead you want the standard deviation of all the means computed from both
+distributions:
+\begin{minted}[linenos,numbersep=.5em]{r}
+sd = sd(c(all_means[1,], all_means[2,]))
+\end{minted}
+
+\end{essaystyle}
+\end{document}
