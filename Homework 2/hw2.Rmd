@@ -1,0 +1,597 @@
+---
+title: "Problem Set 2"
+author: "Ansel George"
+output: pdf_document
+---
+
+# Homework 2
+
+```{r}
+unos = matrix(1, 2, 3)
+
+maf1 = 0.2
+maf0 = 0.15
+ncase = 1000
+ncontrol = 2000
+nsamp = ncase + ncontrol
+
+set.seed(2019)
+```
+
+## 1. Simulate a case control study
+
+### A. Define a vector with 1000 cases (value=1) and 2000 controls (value=0).
+
+```{r}
+disvec = c(rep(1, ncase), rep(0, ncontrol))
+```
+
+### B. Simulate genotype for each person (just one SNP here) using the SAME allele frequencies for cases and controls.
+
+```{r}
+xfvec = c(rbinom(ncase, 1, maf1), rbinom(ncontrol, 1, maf1))
+xmvec = c(rbinom(ncase, 1, maf1), rbinom(ncontrol, 1, maf1))
+snpvec = xfvec + xmvec
+```
+
+Genotype is represented by an integer - 0 and 2 for the two homozygotes, and 1
+for the heterozygote.
+
+### C. Calculate table of observed genotype counts for cases and controls (using R function table)
+```{r}
+mydata = data.frame(disvec, snpvec)
+tt = table(mydata)
+tt
+```
+
+### D. Calculate chi2 statistic using the R function chisq.test(). What degrees of freedom should you use?
+
+```{r}
+chitest <- chisq.test(tt)
+chitest$statistic
+```
+
+The $\chi^2$ statistic is 2.79301.
+
+
+### E. Calculate p-value. Is this significant?
+```{r}
+chitest$p.value
+```
+
+The p-value of the $\chi^2$ statistic is .2475 (2 degrees of freedom).
+
+
+### F. Run association using logistic regression
+```{r}
+fit = glm(disvec~snpvec, mydata, family='binomial')
+print(summary(fit))
+```
+
+The regression coefficient is -0.06119 (p=.38), meaning essentially no
+covarying relationship. Variation in genotype is not associated with a
+fold-increase in disease effect.
+
+
+### G. Calculate odds ratio using the function provided, take log and compare with the regression coefficient from the logistic regression
+```{r}
+OR = function(b) {
+  deno = ((2*sum(b[,1]==1&b[,2]==0) + sum(b[,1]==1&b[,2]==1)) /
+          (2*sum(b[,1]==1&b[,2]==2) + sum(b[,1]==1&b[,2]==1)))
+  nume = (((2*sum(b[,1]==0&b[,2]==0) + sum(b[,1]==0&b[,2]==1)) /
+           (2*sum(b[,1]==0&b[,2]==2) + sum(b[,1]==0&b[,2]==1))))
+  nume/deno
+}
+
+log(OR(mydata))
+```
+
+The log odds ratio is -0.06023683, almost the same value as the regression
+coefficient.
+
+This is expected because the logistic regression fits the model to a logit
+expression where each parameter coefficient is the odds ratio for the effect
+with respect to the parameter. (Assuming parameters are independent.)
+
+
+### H. Re-run the simulation with different maf for cases and controls and plot the chi2 statistics as a function of the ratio between case and control minor allele frequencies. You may want to use ratios in the range of 0.5 and 2.
+
+```{r}
+mafratios = seq(.5, 2, .001)
+
+chistats = 0*1:length(mafratios)
+for (i in 1:length(mafratios)) {
+  maf1 = mafratios[i] / (mafratios[i]+1)
+  maf2 = 1 - maf1
+
+  xfvec = c(rbinom(ncase, 1, maf1), rbinom(ncontrol, 1, maf2))
+  xmvec = c(rbinom(ncase, 1, maf1), rbinom(ncontrol, 1, maf2))
+  snpvec = xfvec + xmvec
+
+  mydata = data.frame(disvec, snpvec)
+
+  tt = table(mydata)
+
+  chistat = chisq.test(tt)
+  chistats[i] = chistat$statistic
+}
+
+library(ggplot2)
+qplot(mafratios, chistats)
+```
+
+The $\chi^2$ statistics are minimized when there is a 1:1 ratio of major and minor
+allele frequencies. This is understandable given that the $\chi^2$ estimates the
+goodness of fit of a null model of independence between putative 'causes' and
+'effects.'
+
+
+## 2. Interpret LOD score table from BRCA1 paper
+
+### A. Why do the authors claim to have found a disease susceptibility locus (DSL) near D17S74 (measured genetic marker)?
+
+The LOD scores across families are higher than 3 when comparing the disease
+and phenotype. The fact that several families contribute independently to the
+association also bolsters the claim that the marker is linked to a it. Also,
+markers with higher recombination fractions exhibit lower LOD scores strengthen
+the argument.
+
+Interestingly, the cumulative LOD scores are dominated by one family where
+there was a particularly high (>100) fold-increase with the DSL and early onset
+cancer (LOD=2.36).
+
+Had that family been excluded from the study, the graphs would have gone from
+(top to bottom):
+
+```{r}
+onsetAges = c(32.7, 37.2, 37.3, 39.8, 42.6, 44.2, 45.4, 47, 47.4, 47.6, 49.3,
+              50.2, 50.4, 51.4, 51.8, 52, 53.5, 53.6, 55.8, 56.4, 58.7, 59.4,
+              63.3)
+lodScores = c(2.36, .5, .4, 1.14, -.5, 1.38, .7, 0, -.31, -.04, -1.51, -.06,
+              -.41, -.65, -.35, -2.71, -.13, -.75, -2.56, -1.71, .65, -.85,
+              -0.07)
+df = data.frame("Age"=onsetAges, "LODScore"=lodScores)
+df["CumScores"] = cumsum(lodScores)
+df2 = df[2:dim(df)[1],1:dim(df)[2]]
+df2["CumScores"] = cumsum(lodScores[2:length(lodScores)])
+
+ggplot(df) + aes(x=Age, y=CumScores) + geom_point() +
+  geom_hline(yintercept=3) + labs(title="with Family 1")
+ggplot(df2) + aes(x=Age, y=CumScores) + geom_point() +
+  geom_hline(yintercept=3) + labs(title="without Family 1")
+```
+
+There would still be significant LOD scores for the cohorts between ages
+~32-47, but much closer to the cutoff at 3. Given what is now known about BRCA1
+mutants and elevated cancer risks, one could imagine that the 1000-fold cutoff
+used to correct for multiple testing could have screened out this particular
+DSL had family 1 not been encountered and the LOD score of another family had
+been slightly less than what was measured. Because odd-ratios are computed from
+ratios of numbers between 0 and 1, slight differences  - even those due to
+measurement - could produce large fold-changed.
+
+
+### B. Why do they focus on the LOD scores for recombination rate 0.001?
+
+Lower recombination rates are better at resolving loci linked to putative DSLs
+because the markers are less likely to have decoupled from the marker over the
+generations.
+
+
+### C. Why do they claim that the DSL is for early onset breast cancer?
+
+The cumulative LOD score drops off at when considering later ages (~47) and
+increases past the significance for cohorts between ~32-47, so the DSL is only
+implicated in disease phenotypes at earlier ages, termed 'early onset.'
+
+
+# Lab 2
+
+
+## 1. What are the columns for the two files generated (.lmiss & .imiss)?
+
+| imiss      |                                            | 
+| ---        | ---                                        | 
+| FID        | Family ID                                  | 
+| IID        | Individual ID                              | 
+| MISS_PHENO | Missing phenotype? (Y/N)                   | 
+| N_MISS     | Number of missing SNPs                     | 
+| N_GENO     | Number of non-obligatory missing genotypes | 
+| F_MISS     | Proportion of missing SNPs                 | 
+
+| lmiss  |                                            | 
+| ---    | ---                                        | 
+|        | 
+| SNP    | SNP identifier                             | 
+| CHR    | Chromosome number                          | 
+| N_MISS | Number of individuals missing this SNP     | 
+| N_GENO | Number of non-obligatory missing genotypes | 
+| F_MISS | Proportion of sample missing for this SNP  | 
+
+
+
+## 2. What do the different numbers returned from the command above correspond to (*hint: man*)? How many SNPs are in this dataset?
+
+wc prints out:
+```
+<# lines> <# words> <# characters> <filename>
+```
+
+There are 89 individuals and 83534 markers. (Subtract 1 for the file header.)
+
+
+
+## 3. What are the different columns in the file generated (*freq_stat.frq*)? What do you think they mean?
+
+|         |                              | 
+| ---     | ---                          | 
+| CHR     | Chromosome                   | 
+| SNP     | SNP identifier               | 
+| A1      | Allele 1 code (minor allele) | 
+| A2      | Allele 2 code (major allele) | 
+| MAF     | Minor allele frequency       | 
+| NCHROBS | Non-missing allele count     | 
+
+
+## 4. Given your knowledge of the options and PLINK syntax, translate the above command into a description of our quality control.
+
+Filter out SNPs where:  
+ * individuals with proportion of missing alleles > .05  
+ * minor allele frequency < .01  
+ * when SNPs with missingness > .05  
+ * where test statistic for HWE fails threshold = .05  
+
+
+## 5. Use the commands learned in Section 1.4 to generate statistics on missing data and allele frequencies for *hapmap1_QC1*. Make sure not to name them the same thing as the previously generated statistic files. How are the files generated from *hapmap1* and *hapmap1_QC1* different? Are the number of individuals the same after our quality control? The number of SNPs?
+
+```{bash, eval=FALSE}
+plink --noweb --bfile hapmap1_QC1 --missing --out miss_stat_QC1
+plink --noweb --bfile hapmap1_QC1 --freq --out freq_stat_QC1
+```
+
+The files generated from hapmap_QC1 are the computed summary statistics, etc.
+without the data points that did not clear the quality control thresholds set
+when generating hapmap_QC1.
+
+Missing log:
+```
+Reading map (extended format) from [ hapmap1_QC1.bim ]
+62971 markers to be included from [ hapmap1_QC1.bim ]
+Reading pedigree information from [ hapmap1_QC1.fam ]
+89 individuals read from [ hapmap1_QC1.fam ]
+89 individuals with nonmissing phenotypes
+Assuming a disease phenotype (1=unaff, 2=aff, 0=miss)
+Missing phenotype value is also -9
+44 cases, 45 controls and 0 missing
+89 males, 0 females, and 0 of unspecified sex
+Reading genotype bitfile from [ hapmap1_QC1.bed ]
+Detected that binary PED file is v1.00 SNP-major mode
+Before frequency and genotyping pruning, there are 62971 SNPs
+89 founders and 0 non-founders found
+Writing individual missingness information to [ miss_stat_QC1.imiss ]
+Writing locus missingness information to [ miss_stat_QC1.lmiss ]
+Total genotyping rate in remaining individuals is 0.996533
+0 SNPs failed missingness test ( GENO > 1 )
+0 SNPs failed frequency test ( MAF < 0 )
+After frequency and genotyping pruning, there are 62971 SNPs
+After filtering, 44 cases, 45 controls and 0 missing
+After filtering, 89 males, 0 females, and 0 of unspecified sex
+```
+
+Allele frequency log:
+```
+Reading map (extended format) from [ hapmap1_QC1.bim ]
+62971 markers to be included from [ hapmap1_QC1.bim ]
+Reading pedigree information from [ hapmap1_QC1.fam ]
+89 individuals read from [ hapmap1_QC1.fam ]
+89 individuals with nonmissing phenotypes
+Assuming a disease phenotype (1=unaff, 2=aff, 0=miss)
+Missing phenotype value is also -9
+44 cases, 45 controls and 0 missing
+89 males, 0 females, and 0 of unspecified sex
+Reading genotype bitfile from [ hapmap1_QC1.bed ]
+Detected that binary PED file is v1.00 SNP-major mode
+Before frequency and genotyping pruning, there are 62971 SNPs
+89 founders and 0 non-founders found
+Writing allele frequencies (founders-only) to [ freq_stat_QC1.frq ]
+```
+
+The number of markers have been reduced from 83534 to 62971, but there are here
+are still 89 individuals.
+
+
+## 6. Generate statistics for this new BED file. How many SNPs are there in the *hapmap1_QC2* dataset?
+
+```
+83534 (of 83534) markers to be included from [ hapmap1.map ]
+89 individuals read from [ hapmap1.ped ]
+89 individuals with nonmissing phenotypes
+Assuming a disease phenotype (1=unaff, 2=aff, 0=miss)
+Missing phenotype value is also -9
+44 cases, 45 controls and 0 missing
+89 males, 0 females, and 0 of unspecified sex
+Reading list of SNPs to exclude [ badSNPs.txt ] ... 3 read
+Before frequency and genotyping pruning, there are 83531 SNPs
+89 founders and 0 non-founders found
+0 of 89 individuals removed for low genotyping ( MIND > 0.05 )
+1798 markers to be excluded based on HWE test ( p <= 0.05 )
+        1723 markers failed HWE test in cases
+        1798 markers failed HWE test in controls
+Total genotyping rate in remaining individuals is 0.99441
+2134 SNPs failed missingness test ( GENO > 0.05 )
+16994 SNPs failed frequency test ( MAF < 0.01 )
+After frequency and genotyping pruning, there are 62968 SNPs
+After filtering, 44 cases, 45 controls and 0 missing
+After filtering, 89 males, 0 females, and 0 of unspecified sex
+Writing pedigree information to [ hapmap1_QC2.fam ]
+Writing map (extended format) information to [ hapmap1_QC2.bim ]
+Writing genotype bitfile to [ hapmap1_QC2.bed ]
+Using (default) SNP-major mode
+```
+
+There are now 62968 markers. The three undesired markers have been excluded.
+
+
+## 7. Is the particular genetic variant (*rs2222162*) in the top ten associated SNPs? Does it have the most significant association? 
+
+```
+ CHR         SNP         BP   A1      F_A      F_U   A2        CHISQ            P           OR
+  13   rs9585021      64274    1    0.625   0.2841    2        20.62    5.586e-06          4.2
+   2   rs2222162      10602    1   0.2841   0.6222    2        20.51    5.918e-06       0.2409
+   9  rs10810856      46335    1   0.2955  0.04444    2        20.01    7.723e-06        9.016
+   2   rs4675607      13220    1   0.1628   0.4778    2        19.93     8.05e-06       0.2125
+   2   rs1375352      13219    1   0.1818      0.5    2        19.83    8.485e-06       0.2222
+   2   rs4673349      13218    1   0.1818      0.5    2        19.83    8.485e-06       0.2222
+  21    rs219746      81525    1      0.5   0.1889    2        19.12    1.228e-05        4.294
+   1   rs4078404       6200    2      0.5      0.2    1        17.64    2.667e-05            4
+  14   rs1152431      66892    2   0.2727   0.5795    1        16.94    3.862e-05       0.2721
+```
+
+Yes, it's represented in the top ten. It's association is the second-most
+significant. rs9585021 beats it out for the top spot.
+
+
+## 8. Use commands we know to take this list and write it into a text file named *top_ten_assoc_QC2.txt*.
+
+```{bash, eval=FALSE}
+sort --key=9 -g assoc_QC2.assoc | head > top_ten_assoc_QC2.txt
+```
+
+
+## 9. Observe the top ten SNPs in *log_assoc_QC2*. How do they compare to those from *assoc_QC2*?
+
+top_ten_assoc_QC2.txt:
+```
+CHR         SNP         BP   A1      F_A      F_U   A2        CHISQ            P           OR 
+ 13   rs9585021      64274    1    0.625   0.2841    2        20.62    5.586e-06          4.2 
+  2   rs2222162      10602    1   0.2841   0.6222    2        20.51    5.918e-06       0.2409 
+  9  rs10810856      46335    1   0.2955  0.04444    2        20.01    7.723e-06        9.016 
+  2   rs4675607      13220    1   0.1628   0.4778    2        19.93     8.05e-06       0.2125 
+  2   rs1375352      13219    1   0.1818      0.5    2        19.83    8.485e-06       0.2222 
+  2   rs4673349      13218    1   0.1818      0.5    2        19.83    8.485e-06       0.2222 
+ 21    rs219746      81525    1      0.5   0.1889    2        19.12    1.228e-05        4.294 
+  1   rs4078404       6200    2      0.5      0.2    1        17.64    2.667e-05            4 
+ 14   rs1152431      66892    2   0.2727   0.5795    1        16.94    3.862e-05       0.2721 
+```
+
+top_ten_log_assoc_QC2.txt:
+```
+CHR         SNP         BP   A1       TEST    NMISS         OR         STAT            P 
+  2   rs2222162      10602    1        ADD       89     0.2221       -3.997    6.417e-05
+ 13   rs9585021      64274    1        ADD       88      4.114        3.941    8.118e-05
+  1   rs4078404       6200    2        ADD       89      4.663        3.865    0.0001111
+ 21    rs219746      81525    1        ADD       89      4.161         3.82    0.0001334
+  2   rs1375352      13219    1        ADD       88      0.251       -3.787    0.0001525
+  2   rs4673349      13218    1        ADD       88      0.251       -3.787    0.0001525
+  2   rs4675607      13220    1        ADD       88     0.2417       -3.779    0.0001573
+ 14   rs4899962      66836    2        ADD       88      0.241       -3.757    0.0001717
+  9  rs10810856      46335    1        ADD       89      8.937        3.716    0.0002021
+```
+
+rs4899962 now shows up among the top ten, and the p-values and rank-ordering
+are different for the remaining SNPs.
+
+
+
+## 10. Provide the script you used. How many SNPs, in total, were removed and how many are left? 
+
+Script:
+```{bash, eval=FALSE}
+plink --noweb --bfile GAME_data --make-bed --mind 0.05 --maf 0.05 --hwe 0.001 --out GAME_data_QC1
+plink --noweb --bfile GAME_data_QC1 --adjust --logistic --out log_assoc_QC1
+```
+
+```
+3934 markers to be included from [ GAME_data.bim ]
+Reading pedigree information from [ GAME_data.fam ] 
+5824 individuals read from [ GAME_data.fam ] 
+5824 individuals with nonmissing phenotypes
+Assuming a disease phenotype (1=unaff, 2=aff, 0=miss)
+Missing phenotype value is also -9
+2857 cases, 2967 controls and 0 missing
+3038 males, 2786 females, and 0 of unspecified sex
+Reading genotype bitfile from [ GAME_data.bed ] 
+Detected that binary PED file is v1.00 SNP-major mode
+Before frequency and genotyping pruning, there are 3934 SNPs
+5824 founders and 0 non-founders found
+Writing list of removed individuals to [ GAME_data_QC1.irem ]
+4 of 5824 individuals removed for low genotyping ( MIND > 0.05 )
+26 markers to be excluded based on HWE test ( p <= 0.001 )
+	32 markers failed HWE test in cases
+	26 markers failed HWE test in controls
+Total genotyping rate in remaining individuals is 0.998037
+0 SNPs failed missingness test ( GENO > 1 )
+368 SNPs failed frequency test ( MAF < 0.05 )
+After frequency and genotyping pruning, there are 3544 SNPs
+After filtering, 2857 cases, 2963 controls and 0 missing
+After filtering, 3036 males, 2784 females, and 0 of unspecified sex
+Writing pedigree information to [ GAME_data_QC1.fam ] 
+Writing map (extended format) information to [ GAME_data_QC1.bim ] 
+Writing genotype bitfile to [ GAME_data_QC1.bed ] 
+Using (default) SNP-major mode
+```
+
+After pruning, there are 3544 from 3934 markers and 5824 from 5824 individuals.
+
+
+## 11. Look through the most significant SNPs in the logistic association results file. What is the most significant SNP? What is the p-value? (Make sure you look at the *.assoc.logistic.adjusted* file's Bonferroni-corrected value (BONF) as this gives you the corrected significance). 
+
+```{bash, eval=FALSE}
+sort --key=9 -g log_assoc_QC1.assoc.logistic.adjusted | head > top_ten_log_assoc_log_adj_QC1.txt
+```
+
+top_ten_log_assoc_adj_QC1.txt:
+```
+ CHR         SNP      UNADJ         GC       BONF       HOLM   SIDAK_SS   SIDAK_SD     FDR_BH     FDR_BY
+  13   rs9543325  1.095e-09   4.58e-09  4.127e-06  4.127e-06  4.127e-06  4.127e-06  4.127e-06  3.636e-05
+  13   rs9564966  1.352e-06  3.367e-06   0.005097   0.005096   0.005084   0.005083   0.002549    0.02246
+  13   rs9318166  2.421e-05  4.896e-05    0.09126    0.09121    0.08722    0.08718    0.03042     0.2681
+  13    rs287553  4.345e-05  8.428e-05     0.1638     0.1636     0.1511      0.151    0.03276     0.2887
+  13   rs2987526  3.928e-05  7.675e-05     0.1481      0.148     0.1377     0.1376    0.03276     0.2887
+  13   rs7996252  7.625e-05  0.0001421     0.2875     0.2871     0.2498     0.2496    0.04791     0.4222
+  13   rs2248525  9.776e-05   0.000179     0.3686      0.368     0.3083     0.3079    0.05084      0.448
+  13   rs2265775  0.0001079  0.0001961     0.4067     0.4059     0.3342     0.3337    0.05084      0.448
+  13  rs12870000  0.0001565   0.000277       0.59     0.5888     0.4457      0.445    0.06556     0.5777
+```
+
+The most significant SNP is rs9543325, with unadjusted p-value 1.095e-09 and
+adjusted p-value 4.127e-06.
+
+
+
+## 12. What is the most significant SNP now? What is the p-value?
+
+```{bash, eval=FALSE}
+plink --noweb --bfile GAME_data_QC1 --covar five_PCs.txt --hide-covar --adjust --logistic --out log_assoc_5PC_QC1
+sort --key=9 -g log_assoc_5PC_QC1.assoc.logistic.adjusted | head > top_ten_log_assoc_5PC_adj_QC1.txt
+```
+top_ten_log_assoc_5PC_adj_QC1.txt:
+```
+CHR         SNP      UNADJ         GC       BONF       HOLM   SIDAK_SS   SIDAK_SD     FDR_BH     FDR_BY
+  13   rs9543325  6.167e-09  1.203e-08  2.186e-05  2.186e-05  2.185e-05  2.185e-05  2.186e-05  0.0001912
+  13   rs9564966  5.542e-06  8.393e-06    0.01964    0.01963    0.01945    0.01944    0.00982    0.08593
+  13   rs2987526  3.735e-05  5.273e-05     0.1324     0.1323      0.124     0.1239    0.04412     0.3861
+  13  rs12870000  0.0001084  0.0001472     0.3842     0.3835      0.319     0.3186    0.05187     0.4539
+  13   rs2248525  0.0001208  0.0001634     0.4283     0.4274     0.3484     0.3478    0.05187     0.4539
+  13   rs2265775  0.0001058  0.0001438     0.3751     0.3745     0.3128     0.3124    0.05187     0.4539
+  13    rs287553  0.0001317  0.0001776     0.4669     0.4658     0.3731     0.3724    0.05187     0.4539
+  13   rs7996252  9.582e-05  0.0001307     0.3396     0.3392     0.2879     0.2877    0.05187     0.4539
+  13   rs9318166  6.377e-05  8.828e-05      0.226     0.2258     0.2023     0.2021    0.05187     0.4539
+```
+
+The top SNP is still rs9543325, with unadjusted p-value 6.167e-09 and adjusted
+p-value 2.186e-05.
+
+
+## 13. Are the results the same from Problem 11 and Problem 12? Did correcting for ancestry do anything?
+
+The top two SNPs are the same, and the remaining are the same but in different
+order, due to different p-values.
+
+
+## 14. Make two Manhattan plots by importing the two *.assoc.logistic* files (not the adjusted versions) into R and using some of the code above (you'll need to move them from the cluster to your local environment). Keep in mind that the length of the file is different from the previous Manhattan plot, so you may need to change the significance threshold as well as the data used. What are the main differences between the two plots? 
+
+```{r}
+library(ggplot2)
+assoc_QC1 <- read.table("section2/log_assoc_QC1.assoc.logistic",header=TRUE)
+assoc_QC1 <- subset(assoc_QC1, P != "NA")
+assoc_QC1$SNP <- as.character(assoc_QC1$SNP)
+
+manhattan2 <- ggplot(assoc_QC1, aes(BP,-log(P), group=factor(CHR),
+                                        color=factor(CHR)))  
+
+bonferroni <- -log(0.05/length(assoc_QC1$P))
+
+our_colors <- c("#FF0000", "#a6cee3", "#0000FF", "#1f78b4", "#00FF00",
+                "#b2df8a", "#33a02c", "#fb9a99", "#91003f", "#fdbf6f",
+                "#ff7f00", "#cab2d6", "#6a3d9a", "#ffff99", "#b15928",
+                "#d95f0e", "#377eb8", "#4d4d4d", "#999999", "#dd1c77",
+                "#542788", "#c994c7")
+
+plt2 <- manhattan2 + geom_point(aes(size=0.5,alpha=0.05)) +
+  scale_y_continuous(limits=c(0,15)) + geom_hline(yintercept=bonferroni, lty=2) +
+  xlab("SNP Position (Chromosomes Ordered 1-22)") +
+  ylab("Association Significance (-ln(p-value))") +
+  ggtitle("log assoc") +
+  scale_colour_manual(values = our_colors)
+plt2
+```
+
+
+```{r}
+library(ggplot2)
+assoc_QC1_5PC <- read.table("section2/log_assoc_5PC_QC1.assoc.logistic",header=TRUE)
+assoc_QC1_5PC <- subset(assoc_QC1_5PC, P != "NA")
+assoc_QC1_5PC$SNP <- as.character(assoc_QC1_5PC$SNP)
+
+manhattan1 <- ggplot(assoc_QC1_5PC, aes(BP,-log(P), group=factor(CHR),
+                                        color=factor(CHR)))  
+
+bonferroni <- -log(0.05/length(assoc_QC1_5PC$P))
+
+our_colors <- c("#FF0000", "#a6cee3", "#0000FF", "#1f78b4", "#00FF00",
+                "#b2df8a", "#33a02c", "#fb9a99", "#91003f", "#fdbf6f",
+                "#ff7f00", "#cab2d6", "#6a3d9a", "#ffff99", "#b15928",
+                "#d95f0e", "#377eb8", "#4d4d4d", "#999999", "#dd1c77",
+                "#542788", "#c994c7")
+
+plt1 <- manhattan1 + geom_point(aes(size=0.5,alpha=0.05)) +
+  scale_y_continuous(limits=c(0,15)) + geom_hline(yintercept=bonferroni, lty=2) +
+  xlab("SNP Position (Chromosomes Ordered 1-22)") +
+  ylab("Association Significance (-ln(p-value))") +
+  ggtitle("log assoc (5PC)") +
+  scale_colour_manual(values = our_colors)
+plt1
+```
+
+The structure-adjusted Manhattan plot displays an SNP with a slightly depressed
+LOD scores at SNPs with enriched scores.
+
+
+## 15. Why do you think many of the SNPs surrounding the focal SNP are colored (i.e. are correlated)? Do you notice any pattern between the color of these points and the background recombination rate?
+
+The low recombination rate around the SNP will increase the correlation between
+the SNP and nearby loci. Lower recombination rates correspond to higher
+correlations, and in recombination hotspots, the correlation drops off to the
+background level.
+
+
+(using SNP rs9543325)
+
+
+## 16. These two plots show major differences in the extent to which the surrounding SNPs correlate with the focal SNP. Describe the difference and come up with an explanation that might explain this phenomenon.  
+
+rs9574207: There are several correlated SNPs with elevated LOD scores spread
+across the entire recombination block where the rs9574207 SNP resides.
+Immediately outside the recombination hotspots flanking the region, LOD scores
+and correlations drop off.
+
+rs7989384: This SNP is found in an area with a relatively high recombination
+rate, so the only highly correlated SNPs are those that are very close to it
+spatially. These correlations have very low p-values, though.
+
+
+## 17. Use locuszoom to plot the P-values from the new analysis (using the same parameters as the first locuszoom plot). Show the plots for both the unconditioned (the very first locuszoom plot) and the conditioned files.
+
+Unconditioned:  
+![Unconditioned locuszoom plot](EUR.rs9543325.500kb.pdf)
+
+Conditioned:  
+![rs9543325 conditioned locuszoom plot](EUR.rs9543325.500kb.condit.pdf)
+
+Note, comparing specific SNPs for log(p-value) is a bit risky given that the
+plot only shows a subset (~200 of 3544 SNPs), so in the graph it cannot be
+exactly said which point corresponds to which SNP.
+
+## 18. Interpret the results of the two plots by writing 1-2 sentences for each.
+
+Unconditioned: When SNPs are linked to rs9543325, the value of the genotypes at that
+locus is predictive of the value of the linked variants. This leads to the
+correlated SNPs having elevated LOD scores.
+
+Conditioned: The elevated LOD scores for the linked SNPs drop to values around
+~1 (no fold change). This means that these loci were dependent of the genotype
+value at rs9543325, and marginalizing over the site largely removes any
+fold-change effect. In a similar vein, the remaining SNPs outside the haplotype
+block are unchanged in their LOD scores, indicating that these loci are
+independent of rs9543325.
