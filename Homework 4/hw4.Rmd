@@ -1,0 +1,242 @@
+---
+title: "Homework 4"
+author: "Ansel George"
+output: pdf_document
+---
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+set.seed(10)
+```
+
+# Problem Set 4
+
+## 1.
+*Look at the table of genomic controls and LD Score intercepts. Interpret what
+they mean in terms of polygenicity and population stratification.*
+
+Genomic control $\lambda$ represents the extent to which $\chi^2$ scores are
+elevated when comparing associations between two populations. The constant,
+derived under the assumption that the loci used to compute it are entirely
+independent, provides a means to correct for population stratification and
+cryptic relatedness that are endemic to case-control studies due to the higher
+expected relatedness of case populations. For all populations in the table, the
+genomic control factors are consistently large ($\lambda > 1.05$).
+
+However, genetic control is too overzealous a corrective in cases where markers
+cannot be assumed to be independent. For highly polygenic traits, where allele
+patterns in case populations are correlated across many loci, $\lambda$ will
+also be elevated. Another method, fortunately, is available to parse out the
+elevation due to population stratification and polygenicity of the trait(s) of
+interest - LD score regression.
+
+LD score regression computes a $\chi^2$ statistic by adding separate terms for
+LD score (sum of correlations between traits scaled by heritability) and
+population structure ($Na+1$, where a is a measure of structure). To measure
+the extent of stratification contributions, consider (or extrapolate out) cases
+of no heritability or interlocus correlations. This corresponds to the
+y-intercept of the LD-score vs $\chi^2$ plot. If there is no population
+stratification, $Na \sim 0$, and the y-intercept will be 1.
+
+In the table, the intercepts are all $\sim 1$. This means that for all
+phenotypes, population stratification contributes negligibly to the upwards
+skew in positive hits. This leaves the most plausible explanation for the
+elevated $\lambda$s to be polygenicity.
+
+Traits with lower scores, such as ulcerative colitis and triglycerides, likely
+have fewer correlated loci that can elevate $\lambda$ and therefore are less
+polygenic. Traits with higher scores, like schizophrenia and years of
+schooling, are more polygenic.
+
+```{r}
+gencontrols <- c(1.127, 1.2194, 1.1301, 1.1333, 1.1396, 1.1459, 1.1459, 1.1459,
+                 1.1459, 1.1555, 1.1586, 1.1617, 1.1622, 1.1715, 1.1747,
+                 1.1876, 1.194, 1.1952, 1.1973, 1.2005, 1.2005, 1.2046, 1.2136,
+                 1.2234, 1.2235, 1.2365, 1.2386, 1.2907, 1.3114, 1.3344,
+                 1.3675, 1.4122, 1.4745, 1.5995)
+ldscores <- c(1.0445, .933, 1.0011, .9998, 1.0307, .9871, .9835, 1.0227,
+              1.0187, 1.1235, 1.0096, .9315, 1.0109, 1.0992, 1.0605, .9551,
+              1.0214, 1.0052, 1.0191, 1.0414, 1.0131, 1.0311, 1.0273, 1.0142,
+              1.0526, .9934, 1.0475, .9926, 1.0308, 1.0253, 1.0188, 1.0528,
+              .9378, 1.0635)
+```
+
+
+## 2.
+*Re-create the principal components plot seen in class using the HapMap
+genotype data.*
+
+```{r}
+popinfo <- read.table("relationships_w_pops_051208.txt", sep = '\t', header = TRUE)
+pcplink <- read.table("pca.eigenvec",header=F,as.is=T)
+
+names(pcplink) <- c("FID","IID",paste0("PC",c(1:(ncol(pcplink)-2))))
+pcplink <- popinfo %>% inner_join(pcplink, by=c("FID"="FID", "IID"="IID"))
+
+pcplink %>% ggplot() + aes(PC1,PC2,colour=population) + geom_point()
+```
+
+
+# Lab 4
+
+## Problem 1
+*How many variants are in the "ex1.avinput" file?*
+
+```{bash, eval=FALSE}
+wc -l example/ex1.avinput
+```
+
+There are 21 variants.
+
+
+## Problem 2
+*Are most of the variants associated with disease? If there are any, what
+disease?*
+
+Some but not most are listed with disease associations.
+
+rs11209026, rs2241880: Crohn's disease
+
+The locus spanning (20797176, 21105944): hearing loss
+
+The remaining are only annotated with direct genotypic consequences (stop codon
+insertion, non-synonymous mutation, etc.) without mention of the phenotypic
+effects.
+
+## Problem 3
+*What gene has the second most exonic variants in the
+".exonic_variant_function" file created from our annotate_variation.pl call on
+the "ex1.avinput" example?  What is it's function?*
+
+NOD2 variants are the second-most numerous. ATG16L1 is most common, and GJB6 is
+ignored because it is a frameshift deletion.
+
+## Problem 4
+*Given your answers to problem 2 and 3, what kind of study (and related to what
+phenotype) do you think this example may be pulled from? Why (provide 2-3
+sentences)?*
+
+Several variants are associated with Crohn's disease, so the data may have been
+pulled from a subjects with Crohn's or inflammatory bowel disease (IBD).
+
+
+## Problem 5
+*What band and chromosome has the most discovered variants in this file? (FYI,
+the naming syntax is {chromosome #}{p or q arm}{band}{sub-band}, e.g. 9q22.11
+would be the 11th sub-band of the 22nd band of the q arm of chromosome 9.)*
+
+1p36: Chromosome 1, band 6 (p arm)
+
+
+## Problem 6
+*Doing some research online, are abnormalities in this cytogenetic band
+associated with any known disorders? How are our variants different from the
+genetic causes of this putative group of disorders?*
+
+The region is associated with 1p36 deletion syndrome, which causes mental
+retardation, motor dysfunction, sensory impairment, etc.
+
+The disease is caused by deletions in the region, but the annotated variants
+involve substitutions, not deletions.
+
+
+## Problem 7
+*How many variants were filtered out? How many were annotated?*
+
+10 variants were annotated (dropped) and 11 filtered.
+
+
+## Problem 8
+*What annotated variants have the lowest allele frequency?*
+
+Sorted by allele frequency:
+
+```{text,eval=F}
+1000g2012apr_all	0.01	16	50756540	50756540	G	C	comments: rs2066845 (G908R), a non-synonymous SNP in NOD2
+1000g2012apr_all	0.01	16	50763778	50763778	-	C	comments: rs2066847 (c.3016_3017insC), a frameshift SNP in NOD2
+1000g2012apr_all	0.02	16	50745926	50745926	C	T	comments: rs2066844 (R702W), a non-synonymous SNP in NOD2
+1000g2012apr_all	0.03	1	67705958	67705958	G	A	comments: rs11209026 (R381Q), a SNP in IL23R associated with Crohn's disease
+1000g2012apr_all	0.08	1	1404001	1404001	G	T	comments: rs149123833, a SNP in 3' UTR of ATAD3C
+1000g2012apr_all	0.39	2	234183368	234183368	A	G	comments: rs2241880 (T300A), a SNP in the ATG16L1 associated with Crohn's disease
+1000g2012apr_all	0.55	1	84875173	84875173	C	T	comments: rs6576700 or SNP_A-1780419, a SNP in Affymetrix SNP arrays
+1000g2012apr_all	0.65	1	162736463	162736463	C	T	comments: rs1000050, a SNP in Illumina SNP arrays
+1000g2012apr_all	0.83	1	5935162	5935162	A	T	comments: rs1287637, a splice site variant in NPHP4
+1000g2012apr_all	0.90	1	948921	948921	T	C	comments: rs15842, a SNP in 5' UTR of ISG15
+```
+
+The lowest frequency variants are rs2066845 and rs2066847.
+
+
+## Problem 9
+*\url{http://annovar.openbioinformatics.org/en/latest/user-guide/download/}
+provides a list of the additional annotation databases provided by ANNOVAR.
+Suppose I am in a clinical genetics setting and have found what appears to be a
+nonsynonymous mitochondrial variant that is shared among 5 individuals carrying
+an extremely rare disease. Now I'd like to see if the variant is predicted to
+be pathogenic. What database table should I consider using from annovar to
+assess if this variant is potentially pathogenic? Please provide an example
+(you can use dummy path names) of what the command-line call to actually look
+into this would be, assuming I have already downloaded the database. After
+making this call, how would you use skills from this lab to determine if the
+variant is pathogenic?*
+
+Use the mitimpact2 or mitimpact24 databases.
+
+```{bash, eval=FALSE}
+./annotate_variation.pl -filter -dbtype mitimpact2 -buildver hg19 my.avinput humandb/
+```
+
+Check if the variant is pathogenic by looking for extant annotations that link
+it to some disease.
+
+
+## Problem 10
+*Suppose you are doing a GWAS for heart disease and find a variant on
+chromosome 16 position 53809247 (build hg19 coordinates). The reference allele
+is G, and its alternative is A. Use different types of annotations and
+databases with annovar to provide at least 5 facts about the variant that might
+help you interpret the significance of your finding. (Hint: you will need to
+construct an input file for this problem).*
+
+```{bash, eval=F}
+./annotate_variation.pl -geneanno -buildver hg19 example/example.avinput humandb/
+```
+
+```{text, eval=F}
+intronic	FTO	16	53809247	53809247	G	A	comments: none
+```
+
+```{bash, eval=F}
+./annotate_variation.pl -filter -dbtype 1000g2012apr_all -buildver hg19 example/example.avinput humandb/
+```
+
+```{text, eval=F}
+1000g2012apr_all	0.37	16	53809247	53809247	G	A	comments: none
+```
+
+```{bash, eval=F}
+./annotate_variation.pl -regionanno -dbtype cytoBand -buildver hg19 example/example.avinput humandb/
+```
+
+```{eval=F}
+cytoBand	16q12.2	16	53809247	53809247	G	A	comments: none
+```
+
+
+```{bash, eval=F}
+./annotate_variation.pl -regionanno -dbtype cytoBand -buildver hg19 example/example.avinput humandb/
+```
+
+```{text, eval=F}
+gwasCatalog     Name=Body mass index,HDL cholesterol,Triglycerides,HDL cholesterol levels,Obesity (early onset extreme),Waist-hip ratio 16      53809247        53809247        G       A       comments: none
+```
+
+The SNP:
+
+ - is intronic,
+ - found in the FTO gene,
+ - located in subband 2 on band 12 on chromosome 16,
+ - has major allele frequency of .37, and
+ - is associated (GWAS) with high BMI and HDLcholesterol and early onset obesity.
