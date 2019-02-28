@@ -174,10 +174,22 @@ cor(trait2$phenotype, prs)
 to define functional sequences. For a researcher studying human cognitive
 trait, what do you think is the limitation of using this annotation?*
 
+Many features of human cognition are unique to humans, so the genetic basis for
+those features may be unique, too. Searching for conserved genes across species
+will not reveal them.
+
+
 ### (b)
 *Suppose we have a large number of whole-genome sequences of human, can you use
 this dataset to improve annotation of functional non-coding sequences? You just
 need to explain some general ideas.*
+
+The dataset alone can be used to augment existing knowledge of non-coding
+sequences. Large sample sizes can reveal rare variants in the population that
+can then be used to compute a position-weight matrix for any given sequence
+motif, and non-coding regions conserved across samples imply (but do not
+necessarily prove) functional significance.
+
 
 ### (c)
 *We have enhancer data (e.g. ATAC-seq) in a tissue related to disease of
@@ -187,11 +199,41 @@ TFs. Can you propose a better annotation combining enhancer data with TF
 information? (Hint: most variants, even within an enhancer, are likely not
 functional.)*
 
+The sequences embedded in open chromatin (ATAC-seq) can be matched to TF motifs
+from the set of relevant transcription factors. The prior information
+essentially filters out the many sites in the enhancer data. Additional data,
+such as methylation patterns and bound protein profiles, can also be used to
+classify whether the enhances of interest are active or inactive in diseased
+individuals. ChromHMM is one tool for carrying out this analysis.
+
+Also, should any motifs corresponding to TFs previously believed to be relevant
+to the phenotype not show up in the ATAC-seq enhancer data, it would reduce the
+confidence that it is indeed an important factor. The converse may be true but
+is more difficult an argument to make due to the likelihood of false positives.
+In Bayesian terms, the list of relevant TFs represents a prior model for
+association between genotype and disease risk that is updated with enhancer
+data to generate a posterior distribution of association and risk.
+
+
 ### (d)
 *Now suppose we also have experimental data that identified several thousand of
 SNPs with likely regulatory effects (e.g. from large-scale reporter assay). Can
 you use this dataset to provide an even better functional annotation? (Hint:
 use Supervised Learning.)*
+
+A supervised learning algorithm can be used to determine the genetic/epigenetic
+features characteristic of particular functional classes based on a training
+dataset of genomes with SNPs of known regulatory function and/or pathogenic
+effects. The nature of the classes themselves are determined by the modeller -
+they can be biophysical (binding affinity for transcription factors, etc.),
+sequence-based (likelihoods of genotypes from multiple sequence alignments,
+etc.), enrichment of annotations in causal variants, among other things. These
+algorithms should also take care to account for linkage, allele frequencies,
+and other confounding factors that can produce erroneous classifications. Once
+the model faithfully recapitulates the training set, while accounting for risk
+of overfitting, it can then be applied to the experimental data to categorize
+SNPs into the functional classes, such as the regulatory pathway, whether the
+SNP removes/augments function, etc.
 
 
 # Lab 6
@@ -204,7 +246,7 @@ for the results?)*
 
 `gencode.v12.annotation.gtf.gz` - gene annotation file
 
-`geuvadis.annot.txt.gz` - SNP annotation information, provides information
+`geuvadis.annot.txt.gz` - SNP annotation information; provides information
 regarding identity, etc of a SNP used for building regression models
 
 `GD462.GeneQuantRPKM.50FN.samplename.resk10.txt.gz` - normalized gene
@@ -334,4 +376,11 @@ Consider only the first 18 genes.
 *What gene demonstrates the greatest amount of correlation between observed and
 predicted gene expression in our sample? Provide the correlation plot for it.*
 
+```{r}
+df <- read.table('results/correlations/summary_correlation.csv', header=T, sep=',')
+head(df[order(-df$r2),])
+```
 
+MAN2B2 has the strongest correlation, r=0.15094139 with p-value=3.247202e-11.
+
+![MAN2B2](results/correlations/MAN2B2.png)
