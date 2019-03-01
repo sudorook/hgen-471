@@ -12,7 +12,7 @@ library(readr)
 
 set.seed(10)
 ```
-# Homework 1
+# Homework 7
 
 ## Problem 1
 *We are deriving a new test for pathway (SNP set) analysis. Suppose a pathway
