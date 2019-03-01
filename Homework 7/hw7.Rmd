@@ -47,7 +47,7 @@ The test statistic $Z$ is distributed $\sim N(0, n)$.
 distribution of $Z$?*
 
 \begin{align}
-E[Z] &= E[\sum_{i=1}^n Z_{i}] \\
+E[Z] &= E[\sum_{i=1}^n Z_i] \\
   &= \sum_{i=1}^n E[Z_i] \\
   &= \sum_{i=1}^n 0 \\
   &= 0
@@ -74,31 +74,23 @@ Var[Z] &= Var[\sum_{i=1}^n Z_i] \\
 *Suppose we have a pathway of $10$ SNPs, $p_1 = p_2 = 0.01$, $p_3 = p_4 = p_5 =
 0.2$ and $p_6 = \hdots = p_{10} = 0.75$. What is the p-value at the pathway
 level in the two scenarios above? Under which scenario, the pathway is more
-significant, and why?*
-
-\begin{align}
-\bar{x} &= \frac{1}{10}(2*.01 + 3* .02 + 5*.75) \\
-  &= .437 \\
-s^2 &= \frac{1}{10-1} \big( (2*(.01-.437))^2 + (3*(.02-.437))^2 + (5*(.75-.437))^2 \big) \\
-  &= .1136678
-\end{align}
-
+significant, and why?*_
 
 ```{r}
 p <- c(.01, .01, .2, .2, .2, .75, .75, .75, .75, .75)
 
-# Enrichment approach
-# binom.test(c(sum(p<=.01),sum(p>.01)), 10, p=.5)
-
 # Association approach
 z <- qnorm(p, 0, 1) # convert p-values to z-scores
 
-dnorm(sum(z), 0, length(z)) # no linkage
-dnorm(sum(z), 0, length(z)^2) # full linkage
+pnorm(sum(z), 0, sqrt(length(z)))*2 # no linkage, 2-tailed
+pnorm(sum(z), 0, sqrt(length(z)^2))*2 # full linkage, 2-tailed
 ```
 
-Under the no linkage model, the pathway is not significant ($p=0.03710818$),
-but under the assumption of full linkage, it is ($p=0.003986536$).
+The pathway under the no linkage model is more significant ($p=0.2288673$),
+than under the full linkage model ($p=0.7035661$). This is understandable given
+that the variance under the full linkage model is the square of that under no
+linkage, so the latter distribution has much greater spread. The greater the
+spread, the larger the deviations needed to obtain lower p-values.
 
 
 ### (d)
@@ -106,7 +98,7 @@ but under the assumption of full linkage, it is ($p=0.003986536$).
 test? And compare the two methods, using $Z$ or $Z^2$ , which one do you
 prefer, and why?*
 
-$Z_{i}^2$ follows a $\chi^2$ distribution, so $T$ is the sum of $\chi^2$
+$Z_i^2$ follows a $\chi^2$ distribution, so $T$ is the sum of $\chi^2$
 statistics.
 
 If SNPs are independent, then $T$ also follows a $\chi^2$ distribution with
@@ -114,9 +106,14 @@ degrees of freedom equal to the total number of SNPs, but if not, then the
 null distribution is undefined. It will need to be simulated by permuting the
 data.
 
-The $Z$ method is more straightforward and computationally easier, but the
-$Z^2$ method is more flexible in that it allows for significance testing given
-a set of p-values without the need for accompanying linkage data.
+The $Z$ method is more straightforward and computationally simpler, but it
+requires that the linkage data be already known in order to specify the
+variance of the $\sum_i Z$ distribution. The $Z^2$ method is more flexible in
+that it allows for significance testing given a set of p-values without the
+need for accompanying linkage data. Non-parametric significance tests (e.g.
+Kolmogorov-Smirnov test) are available in this scenario. 
+
+If that data were available, I would prefer $Z$, and if not, I would use $Z^2$.
 
 
 ## Problem 2
@@ -129,17 +126,16 @@ they are considered to be independent.*
 Calculate the effect size of all SNPs in trait 1.
 
 ```{r,message=F}
-# Load and tidy data
+# Load data
 trait1 <- read_tsv('trait1.txt')
 trait2 <- read_tsv('trait2-1.txt')
-
-trait1_m <- trait1 %>% gather(SNP, Genotype, 3:6)
-trait2_m <- trait2 %>% gather(SNP, Genotype, 3:6)
 ```
 
 ```{r}
 # Regress phenotype on genotype for each SNP
-b1 <- trait1_m %>% group_by(SNP) %>%
+b1 <- trait1 %>%
+  gather(SNP, Genotype, 3:6) %>%
+  group_by(SNP) %>%
   do(m = lm(phenotype ~ Genotype, data=.)) %>%
   mutate(B = summary(m)$coeff[2]) %>%
   select(-m)
@@ -186,9 +182,9 @@ need to explain some general ideas.*
 
 The dataset alone can be used to augment existing knowledge of non-coding
 sequences. Large sample sizes can reveal rare variants in the population that
-can then be used to compute a position-weight matrix for any given sequence
-motif, and non-coding regions conserved across samples imply (but do not
-necessarily prove) functional significance.
+can then be used to compute position-weight matrices for sequence motifs, and
+non-coding regions conserved across samples imply (but do not necessarily
+prove) functional significance, including in non-coding regions.
 
 
 ### (c)
@@ -203,7 +199,7 @@ The sequences embedded in open chromatin (ATAC-seq) can be matched to TF motifs
 from the set of relevant transcription factors. The prior information
 essentially filters out the many sites in the enhancer data. Additional data,
 such as methylation patterns and bound protein profiles, can also be used to
-classify whether the enhances of interest are active or inactive in diseased
+classify whether the enhancers of interest are active or inactive in diseased
 individuals. ChromHMM is one tool for carrying out this analysis.
 
 Also, should any motifs corresponding to TFs previously believed to be relevant
@@ -224,16 +220,17 @@ use Supervised Learning.)*
 A supervised learning algorithm can be used to determine the genetic/epigenetic
 features characteristic of particular functional classes based on a training
 dataset of genomes with SNPs of known regulatory function and/or pathogenic
-effects. The nature of the classes themselves are determined by the modeller -
-they can be biophysical (binding affinity for transcription factors, etc.),
-sequence-based (likelihoods of genotypes from multiple sequence alignments,
-etc.), enrichment of annotations in causal variants, among other things. These
-algorithms should also take care to account for linkage, allele frequencies,
-and other confounding factors that can produce erroneous classifications. Once
-the model faithfully recapitulates the training set, while accounting for risk
-of overfitting, it can then be applied to the experimental data to categorize
-SNPs into the functional classes, such as the regulatory pathway, whether the
-SNP removes/augments function, etc.
+effects. The particular classes of interest are determined by the modeller -
+they can be biophysical (e.g. binding affinity for transcription factors),
+sequence-based (e.g. likelihoods of genotypes from multiple sequence
+alignments), enrichment of annotations in causal variants, among other things.
+These algorithms should also take care to account for linkage, allele
+frequencies, overfitting, and other confounding factors that can produce erroneous
+classifications or non-generalizable models. Once the learning algorithm
+constructs a model that faithfully recapitulates the training set, the model
+can then be applied to the experimental data to categorize SNPs into the
+functional classes, such as the regulatory pathway, whether they remove/augment
+function, etc.
 
 
 # Lab 6
@@ -244,17 +241,19 @@ SNP removes/augments function, etc.
 with Matrix eQTL? (Hint: What is the goal of Matrix eQTL? Are there categories
 for the results?)*
 
-`gencode.v12.annotation.gtf.gz` - gene annotation file
+`gencode.v12.annotation.gtf.gz` - annotation file containing a list of
+demonstrated features for genes in the entire genome
 
-`geuvadis.annot.txt.gz` - SNP annotation information; provides information
-regarding identity, etc of a SNP used for building regression models
+`geuvadis.annot.txt.gz` - SNP annotation information for transcripts (RNA);
+provides information regarding identity, etc. of a SNP used for building
+regression models
 
 `GD462.GeneQuantRPKM.50FN.samplename.resk10.txt.gz` - normalized gene
 expression data, used to build a regression of genotype (SNP) into a linear
 model for gene expression
 
 `geuvadis.snps.txt.gz` - genotype data, used once the linear model is built to
-predict gene expression
+predict gene expression based on a regression model
 
 
 ## Problem 2
@@ -265,10 +264,11 @@ limit our scope. We could have either limited the number of genes or the number
 of SNPs we examine for this lab exercise. Using your knowledge of R (and
 abilities to search R documentation), describe how you can determine which it
 was. Did we limit the number of genes or SNPs? (Hint: look at the sections
-labeled '# snp' and '# gene expression' in the prepare_inputs_for_matrix-eqtl.r
+labeled '# snp' and '# gene expression' in the `prepare_inputs_for_matrix-eqtl.r`
 file).*
 
-Select the first 20 rows in the gene\_expression matrix.
+Limit the number of genes analyzed by selecting the first 20 rows in the
+gene\_expression matrix.
 
 ```{r, eval=F}
 gene_expression <- gene_expression[1:20, ]
@@ -318,25 +318,34 @@ number of QTLs? Hints: 1) Only basic QC has been applied to SNPs used in the
 analysis (see Plink lab section 1.5.1 for more) & 2) Open up the output files
 and compare the statstics for groups of QTLs.*
 
-![qqplot](results/eqtls/gevadis_eQTL_QQ-plot.png)
-
 Number cis-eQTLs: 1
 
 Number trans-eQTL: 10591
 
+The elevation of the latter is to be expected given that there are only a few
+kb where cis eQTLs can reside and the rest of the entire genome where
+trans-eQTLs can be.
+
 Many of the trans-eQTLs have identical summary statistics, suggesting that many
 of them are in linkage disequilibrium with one other. SNPs within a linkage
-block with have the same summary statistics to with respect to an SNP outside
-the block.
+block with have the same summary statistics with respect to an SNP outside the
+block.
+
+![qqplot](results/eqtls/gevadis_eQTL_QQ-plot.png)\
 
 
 ## Problem 6
 
-*Examining the prepare_inputs_for_predixcan.r script and seeing its resulting
+*Examining the `prepare_inputs_for_predixcan.r` script and seeing its resulting
 files, what do you think the section "# prepare genotype files (split 1 to 22)"
 is doing? Why might it be important (or at least efficient) to do this?*
 
-The genotypes are being split among the 22 chromosomes.
+The genotypes are being split among the 22 chromosomes into separate files.
+Splitting the data could make the process more amenable to parallelization,
+given that the regressions/imputations for the SNPs can be computed
+independently of one another. Another advantage could that separate files with
+independent data can require less memory at runtime by loading one chromosome
+into memory at a time rather than the full genome at once.
 
 
 ## Problem 7
@@ -347,6 +356,13 @@ calls for another file in the /datasets directory called
 "gtex_v7_Cells_EBV-transformed_lymphocytes_imputed_europeans_tw_0.5_signif.db".
 Given your knowledge of what the other input files are and of the PrediXcan
 method in general, what do you think this new file is and why is it important?*
+
+PrediXcan uses a reference transcriptome to train a prediction model for
+genotype and expression. The regression model is used to impute the expression
+data from individual genotypes.
+
+The file likely contains expression data from lymphocytes gathered from a
+European sample population by the GTEx project.
 
 
 ## Problem 8
