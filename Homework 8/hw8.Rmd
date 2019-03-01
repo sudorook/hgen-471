@@ -1,0 +1,211 @@
+---
+title: Problem Set 8
+author: Ansel George
+output: pdf_document
+---
+
+# Lab 7
+
+## Problem 1
+*How many mapped sequences do we have for this file?*
+
+There are 1000944-4=1000940 sequence reads.
+
+## Problem 2
+Searching online, what are first 11 columns of the .sam file's alignment
+section (ignore columns 12 onward)?
+
+From the [SAM documentation](https://samtools.github.io/hts-specs/SAMv1.pdf):
+
+| Col | Field | Type   | Brief description                     |
+| --- | ---   | ---    | ---                                   |
+| 1   | QNAME | String | Query template NAME                   |
+| 2   | FLAG  | Int    | bitwise FLAG                          |
+| 3   | RNAME | String | Reference sequence NAME               |
+| 4   | POS   | Int    | 1-based leftmost mapping POSition     |
+| 5   | MAPQ  | Int    | MAPping Quality                       |
+| 6   | CIGAR | String | CIGAR string                          |
+| 7   | RNEXT | String | Reference name of the mate/next read  |
+| 8   | PNEXT | Int    | Position of the mate/next read        |
+| 9   | TLEN  | Int    | observed Template LENgth              |
+| 10  | SEQ   | String | segment SEQuence                      |
+| 11  | QUAL  | String | ASCII of Phred-scaled base QUALity+33 |
+
+
+## Problem 3
+*What do you notice about the third column for all sequences in our .sam file?
+Given your online reading and the file's name, what does this mean about our
+.sam file?*
+
+The reference sequence name is 22 for all reads. Given that the name of the
+file is `sample_chr22_00.sam`, the reference sequence is likely from chromosome
+22.
+
+
+## Problem 4
+*What is the interpretation of the entries in the 11th column (i.e. what would
+be the meaning of the values? How would we compare them to each?)? (Hint: Xin
+briefly discussed something very similar in his lecture on "Variant Calling
+from Sequence Data".)*
+
+The entries are FASTQ codes for the sequence alignment that represent to the
+quality of the variant call for each base. The values are ordered to the
+numerical values of the characters in ASCII, so to compare quality of different
+reads, compare the character used to represent each base across the sequence.
+
+
+
+## Problem 5
+*Given your experience in our other labs and your understanding of what is
+needed to call variants from sequence reads, why are lines 8, 10, and 11
+important? (I don't need to specifically know what is happening in the script
+as that information is contained in the .jar file, which you don't have access
+to). Hint: the letters in front of the files correspond to those files
+functions.*
+
+```{r, eval=F}
+     -R ${dbdir}/hs37d5/hs37d5_chr22.fa \                        ## Line 8
+```
+
+This contains the reference genome for the initial alignment.
+
+```{r, eval=F}
+     -I sampleBAM_chr22_00.srt.bam \                             ## Line 10
+```
+
+This takes the input bam file containing the reads for the sequence calls.
+
+
+```{r, eval=F}
+     -o sampleBAM_chr22_00.vcf                                   ## Line 11
+```
+
+Output the variant calls into a VCF file.
+
+
+## Problem 6
+*What does the above script do? Why run it rather than look at the file
+directly? How many variants are we looking at from the above command?*
+
+`head` will print the first 39 lines, and `tail` will print the last 11 of the
+39 lines. The idea is to avoid looking at all the header lines.
+
+## Problem 7
+*Searching online, what are the first 8 columns in our .vcf file and what do
+they represent?*
+
+| Column | Name    | Description                                                                                                                                                                                                    |
+| ---    | ---     | ---                                                                                                                                                                                                            |
+| 1      | CHROM   | The name of the sequence (typically a chromosome) on which the variation is being called. This sequence is usually known as 'the reference sequence', i.e. the sequence against which the given sample varies. |
+| 2      | POS     | The 1-based position of the variation on the given sequence.                                                                                                                                                   |
+| 3      | ID      | The identifier of the variation, e.g. a dbSNP rs identifier, or if unknown a ".". Multiple identifiers should be separated by semi-colons without white-space.                                                 |
+| 4      | REF     | The reference base (or bases in the case of an indel) at the given position on the given reference sequence.                                                                                                   |
+| 5      | ALT     | The list of alternative alleles at this position.                                                                                                                                                              |
+| 6      | QUAL    | A quality score associated with the inference of the given alleles.                                                                                                                                            |
+| 7      | FILTER  | A flag indicating which of a given set of filters the variation has passed.                                                                                                                                    |
+| 8      | INFO    | An extensible list of key-value pairs (fields) describing the variation. See below for some common fields. Multiple fields are separated by semicolons with optional values in the format: "<key>=[,data]".    |
+| 9      | FORMAT  | An (optional) extensible list of fields for describing the samples. See below for some common fields.                                                                                                          |
+| +      | SAMPLEs | For each (optional) sample described in the file, values are given for the fields listed in FORMAT                                                                                                             |
+
+
+## Problem 8
+*Looking at the INFO column, does our sample seem to be heterozygous at any of
+the variants in our subset from the script above? If yes, how many? Do the same
+for homozygous for the reference allele and homozygous for the alternative
+allele. One of these three genotypes should not be present in our file - which
+one and why?*
+
+9 of the 10 in the subset are heterozygous, 1 is homozygous for the alternate
+allele, and 0 are homozygous for the reference.
+
+
+## Problem 9
+*Do the same as in problem 8, but for the entire file (not just our subset from
+the script above)? How many variants are of each genotype in the entire .vcf
+file?*
+
+```{bash,eval=F}
+tail -n +11 sampleBAM_chr22_00.vcf | tail -n 11 | cut -s -f8 | cut -d';' -f1 | cut -d'=' -f2 > genotypes.txt
+```
+
+```{bash,eval=F}
+grep 2 genotypes.txt | wc -l
+```
+3474 are homozygous for the alternative.
+
+
+```{bash,eval=F}
+grep 1 genotypes.txt | wc -l
+```
+9494 are heterozygous (including 37 calls that are 1,1).
+
+
+```{bash,eval=F}
+grep 0 genotypes.txt | wc -l
+```
+0 are homozygous for the reference allele. Otherwise, they would not be a
+variant.
+
+
+## Problem 10
+*Rank our subset variants from most confident in calling to least confident.
+How do we determine this from our .vcf file?*
+
+Use the QUAL column of the VCF file.
+
+```{bash,eval=F}
+tail -n +11 sampleBAM_chr22_00.vcf | sort -k6 -nr > sampleBAM_chr22_00_sorted.vcf
+head(sampleBAM_chr22_00_sorted.vcf)
+```
+
+```
+22	16136566	.	A	G	3505.77	.	AC=2;AF=1.00;AN=2;BaseQRankSum=-0.927;ClippingRankSum=0.000;DP=96;ExcessHet=3.0103;FS=4.417;MLEAC=2;MLEAF=1.00;MQ=60.00;MQRankSum=0.000;QD=33.93;ReadPosRankSum=-0.131;SOR=0.261	GT:AD:DP:GQ:PL	1/1:5,91:96:70:3534,70,0
+22	16344934	.	T	C	3468.77	.	AC=2;AF=1.00;AN=2;DP=88;ExcessHet=3.0103;FS=0.000;MLEAC=2;MLEAF=1.00;MQ=60.00;QD=24.97;SOR=1.244	GT:AD:DP:GQ:PL	1/1:0,88:88:99:3497,263,0
+22	16248248	.	C	T	2751.77	.	AC=2;AF=1.00;AN=2;DP=65;ExcessHet=3.0103;FS=0.000;MLEAC=2;MLEAF=1.00;MQ=60.00;QD=29.91;SOR=0.723	GT:AD:DP:GQ:PL	1/1:0,65:65:99:2780,196,0
+22	16228619	.	T	C	2747.77	.	AC=2;AF=1.00;AN=2;DP=69;ExcessHet=3.0103;FS=0.000;MLEAC=2;MLEAF=1.00;MQ=60.00;QD=28.36;SOR=0.910	GT:AD:DP:GQ:PL	1/1:0,69:69:99:2776,209,0
+22	17506364	.	T	C	2525.77	.	AC=2;AF=1.00;AN=2;BaseQRankSum=-0.806;ClippingRankSum=0.000;DP=71;ExcessHet=3.0103;FS=0.000;MLEAC=2;MLEAF=1.00;MQ=60.00;MQRankSum=0.000;QD=31.45;ReadPosRankSum=-1.212;SOR=0.368	GT:AD:DP:GQ:PL	1/1:3,68:71:87:2554,87,0
+22	16229148	.	T	G	2488.77	.	AC=2;AF=1.00;AN=2;DP=63;ExcessHet=3.0103;FS=0.000;MLEAC=2;MLEAF=1.00;MQ=60.00;QD=33.10;SOR=1.010	GT:AD:DP:GQ:PL	1/1:0,63:63:99:2517,189,0
+22	16346391	.	G	A	2432.77	.	AC=1;AF=0.500;AN=2;BaseQRankSum=0.783;ClippingRankSum=0.000;DP=101;ExcessHet=3.0103;FS=10.483;MLEAC=1;MLEAF=0.500;MQ=60.00;MQRankSum=0.000;QD=24.09;ReadPosRankSum=0.110;SOR=0.893	GT:AD:DP:GQ:PL	0/1:33,68:101:99:2461,0,977
+22	16344866	.	T	G	2324.77	.	AC=1;AF=0.500;AN=2;BaseQRankSum=-1.223;ClippingRankSum=0.000;DP=90;ExcessHet=3.0103;FS=0.922;MLEAC=1;MLEAF=0.500;MQ=60.00;MQRankSum=0.000;QD=25.83;ReadPosRankSum=-0.987;SOR=0.839	GT:AD:DP:GQ:PL	0/1:24,66:90:99:2353,0,724
+22	16325070	.	T	C	2218.77	.	AC=1;AF=0.500;AN=2;BaseQRankSum=-0.707;ClippingRankSum=0.000;DP=73;ExcessHet=3.0103;FS=3.896;MLEAC=1;MLEAF=0.500;MQ=60.00;MQRankSum=0.000;QD=30.82;ReadPosRankSum=0.122;SOR=0.311	GT:AD:DP:GQ:PL	0/1:17,55:72:99:2247,0,688
+22	16325067	.	T	C	2218.77	.	AC=1;AF=0.500;AN=2;BaseQRankSum=-0.695;ClippingRankSum=0.000;DP=73;ExcessHet=3.0103;FS=3.896;MLEAC=1;MLEAF=0.500;MQ=60.00;MQRankSum=0.000;QD=30.82;ReadPosRankSum=0.173;SOR=0.311	GT:AD:DP:GQ:PL	0/1:17,55:72:99:2247,0,688
+```
+
+## Problem 11
+*What reference datasets were used in script above for recalibration?*
+
+The recalibration uses the hapmap_3.3.b37.vcf, 1000G_omni2.5.b37.vcf,
+1000G_phase1.snps.high_confidence.b37.vcf, and dbsnp_138.b37.vcf reference
+datasets for recalibration. (Hapmap, OMNI, 1000-Genome, and DBSNP).
+
+
+## Problem 12
+*Aside from the INFO column, what column has had its entries changed compared
+to the original .vcf file before the recalibration (sampleBAM_chr22_00.vcf)?*
+
+The FILTER column and QUAL scores are different.
+
+
+## Problem 13
+*Rank our subset of variants from most confident in calling to least confident.
+How should we determine this now that we've done recalibration? Is the rank the
+same as when we did this in problem 10?*
+
+```{bash,eval=F}
+tail -n +39 sampleBAM_chr22_00.recal.vcf | grep "PASS" | \
+  sed 's/VQSLOD=\([0-9\.]\+\)/VQSLOD=|\1|/' | \
+  sort -nr -t\| -k2 | tr -d '|' > sampleBAM_chr22_00.recal_sorted.vcf
+```
+
+```
+22	20267689	.	G	A	496.77	PASS	AC=1;AF=0.500;AN=2;BaseQRankSum=-0.880;ClippingRankSum=0.000;DP=25;ExcessHet=3.0103;FS=4.330;MLEAC=1;MLEAF=0.500;MQ=59.96;MQRankSum=0.000;POSITIVE_TRAIN_SITE;QD=21.60;ReadPosRankSum=0.267;SOR=0.191;VQSLOD=40.94;culprit=MQ	GT:AD:DP:GQ:PL	0/1:8,15:23:99:525,0,255
+22	19817433	.	T	C	370.77	PASS	AC=1;AF=0.500;AN=2;BaseQRankSum=-0.442;ClippingRankSum=0.000;DP=23;ExcessHet=3.0103;FS=0.000;MLEAC=1;MLEAF=0.500;MQ=60.00;MQRankSum=0.000;POSITIVE_TRAIN_SITE;QD=16.85;ReadPosRankSum=0.045;SOR=0.765;VQSLOD=23.37;culprit=MQ	GT:AD:DP:GQ:PL	0/1:10,12:22:99:399,0,348
+22	19968971	.	G	A	217.77	PASS	AC=1;AF=0.500;AN=2;BaseQRankSum=0.000;ClippingRankSum=0.000;DP=14;ExcessHet=3.0103;FS=0.000;MLEAC=1;MLEAF=0.500;MQ=60.00;MQRankSum=0.000;POSITIVE_TRAIN_SITE;QD=15.56;ReadPosRankSum=-0.092;SOR=0.693;VQSLOD=23.36;culprit=MQ	GT:AD:DP:GQ:PL	0/1:7,7:14:99:246,0,246
+22	19156708	.	G	C	251.77	PASS	AC=1;AF=0.500;AN=2;BaseQRankSum=1.712;ClippingRankSum=0.000;DP=18;ExcessHet=3.0103;FS=0.000;MLEAC=1;MLEAF=0.500;MQ=60.00;MQRankSum=0.000;POSITIVE_TRAIN_SITE;QD=13.99;ReadPosRankSum=-0.287;SOR=0.693;VQSLOD=23.35;culprit=MQ	GT:AD:DP:GQ:PL	0/1:10,8:18:99:280,0,324
+22	17770181	.	T	G	348.77	PASS	AC=1;AF=0.500;AN=2;BaseQRankSum=0.454;ClippingRankSum=0.000;DP=24;ExcessHet=3.0103;FS=0.000;MLEAC=1;MLEAF=0.500;MQ=60.00;MQRankSum=0.000;POSITIVE_TRAIN_SITE;QD=14.53;ReadPosRankSum=0.200;SOR=0.760;VQSLOD=23.35;culprit=MQ	GT:AD:DP:GQ:PL	0/1:13,11:24:99:377,0,457
+22	17724936	.	G	C	160.77	PASS	AC=1;AF=0.500;AN=2;BaseQRankSum=1.071;ClippingRankSum=0.000;DP=20;ExcessHet=3.0103;FS=0.000;MLEAC=1;MLEAF=0.500;MQ=60.00;MQRankSum=0.000;POSITIVE_TRAIN_SITE;QD=8.46;ReadPosRankSum=0.160;SOR=0.693;VQSLOD=23.35;culprit=MQ	GT:AD:DP:GQ:PL	0/1:13,6:19:99:189,0,428
+22	20296540	.	T	C	285.77	PASS	AC=1;AF=0.500;AN=2;BaseQRankSum=0.458;ClippingRankSum=0.000;DP=18;ExcessHet=3.0103;FS=0.000;MLEAC=1;MLEAF=0.500;MQ=60.00;MQRankSum=0.000;POSITIVE_TRAIN_SITE;QD=15.88;ReadPosRankSum=0.072;SOR=0.693;VQSLOD=23.34;culprit=MQ	GT:AD:DP:GQ:PL	0/1:9,9:18:99:314,0,310
+22	19972824	.	T	C	205.77	PASS	AC=1;AF=0.500;AN=2;BaseQRankSum=-0.507;ClippingRankSum=0.000;DP=16;ExcessHet=3.0103;FS=0.000;MLEAC=1;MLEAF=0.500;MQ=60.00;MQRankSum=0.000;POSITIVE_TRAIN_SITE;QD=12.86;ReadPosRankSum=0.184;SOR=0.814;VQSLOD=23.34;culprit=MQ	GT:AD:DP:GQ:PL	0/1:9,7:16:99:234,0,324
+22	20866834	.	G	A	109.78	PASS	AC=1;AF=0.500;AN=2;BaseQRankSum=-0.524;ClippingRankSum=0.000;DP=5;ExcessHet=3.0103;FS=0.000;MLEAC=1;MLEAF=0.500;MQ=60.00;MQRankSum=0.000;POSITIVE_TRAIN_SITE;QD=21.96;ReadPosRankSum=0.524;SOR=0.693;VQSLOD=23.33;culprit=MQ	GT:AD:DP:GQ:PL	0/1:1,4:5:27:138,0,27
+22	20755226	.	A	G	372.77	PASS	AC=1;AF=0.500;AN=2;BaseQRankSum=0.367;ClippingRankSum=0.000;DP=31;ExcessHet=3.0103;FS=0.000;MLEAC=1;MLEAF=0.500;MQ=60.00;MQRankSum=0.000;POSITIVE_TRAIN_SITE;QD=13.31;ReadPosRankSum=-0.551;SOR=0.693;VQSLOD=23.33;culprit=MQ	GT:AD:DP:GQ:PL	0/1:15,13:28:99:401,0,424
+```
