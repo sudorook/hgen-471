@@ -4,6 +4,56 @@ author: Ansel George
 output: pdf_document
 ---
 
+# Homework 8
+
+## Problem 1
+
+We will explore some of the biases and errors in NGS data, and how one might
+address them.
+
+### (a)
+Suppose a researcher is interested in estimating the extent of genetic
+variation along the human genome using NGS data. For example, in a given
+region, he calls all variants and genotypes of many individuals and then uses
+the average number of different bases between two individuals to assess the
+genetic variation of this region. What is the possible bias in this estimation?
+On average, does he over- or under-estimate the extent of variation?
+
+
+### (b)
+Suppose in a case-control study, samples in cases and controls are sequenced at
+different sites, which use different sequencing platforms at different
+sequencing depths. This could introduce bias and should generally be avoided.
+But suppose we want to address this bias computationally, what should we do?
+For each variant, we assume we know the posterior probabilities of genotypes in
+each individual. (Hint: how did we address for genotype uncertainty in
+association test in the lecture about imputation?).
+
+
+## Problem 2
+We are calling genotype of an individual from sequencing data. Consider one
+position: there are four reads mapped to the allele C, the reference allele,
+and two reads mapped to the allele T. The error rate is assumed to be $\epsilon
+= 0.03$ for all reads.
+
+### (a)
+Use the individual prior defined in the class and genotype likelihood, derive
+the posterior probabilities of the genotypes, CC, CT and TT.
+
+### (b)
+When there are sequencing data from family members, we can also use a "family
+prior". Specifically, suppose we have determined the genotypes of the parents
+as CC and CT. What should be the prior probabilities of the genotypes given
+this information? Determine the posterior probabilities of the child genotypes.
+Which genotype is the most probable now?
+
+### (c)
+A slight variation of the problem: suppose we know the genotypes of the father
+and a sibling instead, CC and CT, respectively. What are the prior and
+posterior probabilities? We also know that the frequency of T in the
+population is 0.2. Hint: first determine the possible genotypes of the mother
+using the Bayes Theorem.
+
 # Lab 7
 
 ## Problem 1
@@ -125,7 +175,8 @@ the script above)? How many variants are of each genotype in the entire .vcf
 file?*
 
 ```{bash,eval=F}
-tail -n +11 sampleBAM_chr22_00.vcf | tail -n 11 | cut -s -f8 | cut -d';' -f1 | cut -d'=' -f2 > genotypes.txt
+tail -n +11 sampleBAM_chr22_00.vcf | tail -n 11 | \
+  cut -s -f8 | cut -d';' -f1 | cut -d'=' -f2 > genotypes.txt
 ```
 
 ```{bash,eval=F}
@@ -154,7 +205,8 @@ How do we determine this from our .vcf file?*
 Use the QUAL column of the VCF file.
 
 ```{bash,eval=F}
-tail -n +11 sampleBAM_chr22_00.vcf | sort -k6 -nr > sampleBAM_chr22_00_sorted.vcf
+tail -n +11 sampleBAM_chr22_00.vcf | \
+  sort -k6 -nr > sampleBAM_chr22_00_sorted.vcf
 head(sampleBAM_chr22_00_sorted.vcf)
 ```
 
@@ -209,3 +261,6 @@ tail -n +39 sampleBAM_chr22_00.recal.vcf | grep "PASS" | \
 22	20866834	.	G	A	109.78	PASS	AC=1;AF=0.500;AN=2;BaseQRankSum=-0.524;ClippingRankSum=0.000;DP=5;ExcessHet=3.0103;FS=0.000;MLEAC=1;MLEAF=0.500;MQ=60.00;MQRankSum=0.000;POSITIVE_TRAIN_SITE;QD=21.96;ReadPosRankSum=0.524;SOR=0.693;VQSLOD=23.33;culprit=MQ	GT:AD:DP:GQ:PL	0/1:1,4:5:27:138,0,27
 22	20755226	.	A	G	372.77	PASS	AC=1;AF=0.500;AN=2;BaseQRankSum=0.367;ClippingRankSum=0.000;DP=31;ExcessHet=3.0103;FS=0.000;MLEAC=1;MLEAF=0.500;MQ=60.00;MQRankSum=0.000;POSITIVE_TRAIN_SITE;QD=13.31;ReadPosRankSum=-0.551;SOR=0.693;VQSLOD=23.33;culprit=MQ	GT:AD:DP:GQ:PL	0/1:15,13:28:99:401,0,424
 ```
+
+The rankings are different, and the magnitude of the confidence in the variant
+calls are much, much lower.
