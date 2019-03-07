@@ -8,51 +8,223 @@ output: pdf_document
 
 ## Problem 1
 
-We will explore some of the biases and errors in NGS data, and how one might
-address them.
+*We will explore some of the biases and errors in NGS data, and how one might
+address them.*
 
 ### (a)
-Suppose a researcher is interested in estimating the extent of genetic
+*Suppose a researcher is interested in estimating the extent of genetic
 variation along the human genome using NGS data. For example, in a given
 region, he calls all variants and genotypes of many individuals and then uses
 the average number of different bases between two individuals to assess the
 genetic variation of this region. What is the possible bias in this estimation?
-On average, does he over- or under-estimate the extent of variation?
+On average, does he over- or under-estimate the extent of variation?*
+
+Structural variations between individuals, such as insertions, deletions, copy
+number variations, translocations, etc. will cause many pairwise differences
+that are in reality caused by a single variant. This will inflate the measure
+of variation.
+
+If sample sizes are not large enough to capture rare variants and *de novo*
+mutations, then many of those variants will not appear within the dataset. This
+will deflate measures of genetic variation.
+
+If the individuals are not randomly sampled from the population, then
+relatedness between individuals could confound results. Related individuals are
+likely to share alleles, so even some common variants may not be detected. This
+will deflate genetic variation.
+
+On balance, between-individual differences due to structural variation are
+greater than those attributable to single-nucleotide variants, so measures of
+genetic diversity that use pairwise base-pair comparisons between individuals
+will return inflated variance estimates.
 
 
 ### (b)
-Suppose in a case-control study, samples in cases and controls are sequenced at
-different sites, which use different sequencing platforms at different
+*Suppose in a case-control study, samples in cases and controls are sequenced
+at different sites, which use different sequencing platforms at different
 sequencing depths. This could introduce bias and should generally be avoided.
 But suppose we want to address this bias computationally, what should we do?
 For each variant, we assume we know the posterior probabilities of genotypes in
 each individual. (Hint: how did we address for genotype uncertainty in
-association test in the lecture about imputation?).
+association test in the lecture about imputation?).*
+
+
 
 
 ## Problem 2
-We are calling genotype of an individual from sequencing data. Consider one
+*We are calling genotype of an individual from sequencing data. Consider one
 position: there are four reads mapped to the allele C, the reference allele,
 and two reads mapped to the allele T. The error rate is assumed to be $\epsilon
-= 0.03$ for all reads.
+= 0.03$ for all reads.*
 
 ### (a)
-Use the individual prior defined in the class and genotype likelihood, derive
-the posterior probabilities of the genotypes, CC, CT and TT.
+*Use the individual prior defined in the class and genotype likelihood, derive
+the posterior probabilities of the genotypes, CC, CT and TT.*
+
+Prior(non-reference heterozygote) $\sim 0.01 * 2/3$
+
+Prior(non-reference homozygote) $\sim 0.01 * 1/3$
+
+Prior(reference homozygote) $\sim 0.999$
+
+\begin{align}
+P(D_j |G) &= \frac{1}{2} [P(D_j|H_1) + P(D_j|H_2)] \\
+P(D_j|B) &= 
+  \begin{cases}
+    1-\epsilon & \text{if $D_j = B$} \\
+    \epsilon/3 & \text{otherwise}
+  \end{cases}
+\end{align}
+
+The likelihood of a genotype is:
+
+\begin{align}
+  P(G|D) &\propto P(D|G)P(G) \\
+  &= \frac{1}{2}[P(D|H_1) + P(D|H_2)]P(G) \\
+  &= \prod_j \frac{1}{2}[P(D_j|H_1) + P(D_j|H_2)]P(G) \\
+\end{align}
+
+
+Likelihoods (reference=C):
+
+\begin{align}
+P(D|G=CC) &= (1-\epsilon)^4 (1-\frac{\epsilon}{3})^2 \\
+  &= .97^4 * (.01)^2 \\
+  &= 8.852928 * 10^{-5}
+\end{align}
+
+\begin{align}
+P(D|G=TC) &= (1-\epsilon)^2 (1-\frac{\epsilon}{3})^4 \\
+  &= \big( \frac{1}{2}[(1-\epsilon) + \frac{\epsilon}{3}] \big)^6 \\
+  &= 0.01384129
+\end{align}
+
+\begin{align}
+P(D|G=TT) &= (1-\epsilon)^2 (1-\frac{\epsilon}{3})^4 \\
+  &= .97^2 * (.01)^4 \\
+  &= 9.409 * 10^{-9}
+\end{align}
+
+
+Priors:
+
+\begin{align}
+P(CC) &= .999 \\
+P(CT) &= .000\bar{6} \\
+P(TT) &= .000\bar{3}
+\end{align}
+
+
+Posteriors:
+
+\begin{align}
+P(CC|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
+  &= \frac{8.852928\text{e-}{5} * .999}{8.852928\text{e-}{5} * .999 + 9.409\text{e-}{9} * .000\bar{3} + 0.01384129 * .000\bar{6}} \\
+  &= .9055217
+\end{align}
+
+\begin{align}
+P(CT|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
+  &= \frac{0.01384129 * .000\bar{6}}{8.852928\text{e-}{5} * .999 + 9.409\text{e-}{9} * .000\bar{3} + 0.01384129 * .000\bar{6}} \\
+  &= .09447823
+\end{align}
+
+\begin{align}
+P(TT|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
+  &= \frac{9.409\text{e-}{9} * .000\bar{3}}{8.852928\text{e-}{5} * .999 + 9.409\text{e-}{9} * .000\bar{3} + 0.01384129 * .000\bar{6}} \\
+  &= 3.211210e-08
+\end{align}
+
+The most likely genotype is still CC, the reference homozygote. This is due to
+the strong prior that assume that most base pairs are invariant across
+individuals in the genome.
 
 ### (b)
-When there are sequencing data from family members, we can also use a "family
+*When there are sequencing data from family members, we can also use a "family
 prior". Specifically, suppose we have determined the genotypes of the parents
 as CC and CT. What should be the prior probabilities of the genotypes given
 this information? Determine the posterior probabilities of the child genotypes.
-Which genotype is the most probable now?
+Which genotype is the most probable now?*
+
+Assuming that no *de novo* mutations take place in the parental germplasm and
+that the parental genotypes are known with absolute certainty, the new priors
+and posteriors are as follows:
+
+New priors:
+
+\begin{align}
+P(CC) &= .5 \\
+P(CT) &= .5 \\
+P(TT) &= 0
+\end{align}
+
+New posteriors:
+
+\begin{align}
+P(CC|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
+  &= \frac{8.852928\text{e-}{5} * .5}{8.852928\text{e-}{5} * .5 + 9.409\text{e-}{9} * 0 + 0.01384129 * .5} \\
+  &= 0.000639194
+\end{align}
+
+\begin{align}
+P(CT|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
+  &= \frac{0.01384129 * .5}{8.852928\text{e-}{5} * .5 + 9.409\text{e-}{9} * 0 + 0.01384129 * .5} \\
+  &= 0.999360806
+\end{align}
+
+\begin{align}
+P(TT|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
+  &= \frac{9.409\text{e-}{9} * 0}{8.852928\text{e-}{5} * .5 + 9.409\text{e-}{9} * 0 + 0.01384129 * .5} \\
+  &= 0
+\end{align}
+
+The new prior probabilities bolster the arguments for the non-reference
+haplotype, so the new most likely genotype is the heterozygote CT.
 
 ### (c)
-A slight variation of the problem: suppose we know the genotypes of the father
+*A slight variation of the problem: suppose we know the genotypes of the father
 and a sibling instead, CC and CT, respectively. What are the prior and
-posterior probabilities? We also know that the frequency of T in the
-population is 0.2. Hint: first determine the possible genotypes of the mother
-using the Bayes Theorem.
+posterior probabilities? We also know that the frequency of T in the population
+is 0.2. Hint: first determine the possible genotypes of the mother using the
+Bayes Theorem.*
+
+If the sibling is CT and the father CC, then the mother has at least 1 T
+allele and therefore can either be TT or CT. The likelihoods for either
+genotype is as follows (assuming the mother's genotype is randomly sampled from
+the population):
+
+\begin{align}
+P(G_{Mother}=CC|G_{Child}=CC,G_{Father}=CT) &= \frac{P(G_C=CC|G_M=CC,G_F=CT) * P(G_M=CC)}{ \sum_{X \in \{C,T\}} P(G_C=CC|G_M=XC,G_F=CT)} \\
+  &= \frac{.5 * .64}{ .5 * .64 + .25 * .32 + 0 * .04} \\
+  &= .8
+\end{align}
+
+\begin{align}
+P(G_{Mother}=CT|G_{Child}=CC,G_{Father}=CT) &= \frac{P(G_C=CC|G_M=CT,G_F=CT) * P(G_M=CC)}{ \sum_{X \in \{C,T\}} P(G_C=CC|G_M=XC,G_F=CT)} \\
+  &= \frac{.25 * .16}{ .5 * .64 + .25 * .32 + 0 * .04} \\
+  &= .2
+\end{align}
+
+Priors:
+
+\begin{align}
+P(G=CC) &= \sum_{G_M} P(G=CC|G_M) P(G_M) \\
+  &= P(G=CC|G_M=CC)P(G_M=CC) + P(G=CC|G_M=CT)P(G_M=CT)\\
+  &= .5 * .8 + .25 * .2 = .45
+\end{align}
+
+\begin{align}
+P(G=CT) &= \sum_{G_M} P(G=CT|G_M) P(G_M) \\
+  &= P(G=CT|G_M=CC)P(G_M=CC) + P(G=CT|G_M=CT)P(G_M=CT)\\
+  &= .5 * .8 + .5 * .2 = .5
+\end{align}
+
+\begin{align}
+P(G=TT) &= \sum_{G_M} P(G=TT|G_M) P(G_M) \\
+  &= P(G=TT|G_M=CC)P(G_M=CC) + P(G=TT|G_M=CT)P(G_M=CT)\\
+  &= 0 * .8 + .25 * .2 = .05
+\end{align}
+
 
 # Lab 7
 
