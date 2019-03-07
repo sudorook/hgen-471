@@ -163,13 +163,13 @@ New posteriors:
 \begin{align}
 P(CC|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
   &= \frac{8.852928\text{e-}{5} * .5}{8.852928\text{e-}{5} * .5 + 9.409\text{e-}{9} * 0 + 0.01384129 * .5} \\
-  &= 0.000639194
+  &= 0.00635538
 \end{align}
 
 \begin{align}
 P(CT|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
   &= \frac{0.01384129 * .5}{8.852928\text{e-}{5} * .5 + 9.409\text{e-}{9} * 0 + 0.01384129 * .5} \\
-  &= 0.999360806
+  &= 0.99364462
 \end{align}
 
 \begin{align}
@@ -180,6 +180,7 @@ P(TT|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
 
 The new prior probabilities bolster the arguments for the non-reference
 haplotype, so the new most likely genotype is the heterozygote CT.
+
 
 ### (c)
 *A slight variation of the problem: suppose we know the genotypes of the father
@@ -194,14 +195,14 @@ genotype is as follows (assuming the mother's genotype is randomly sampled from
 the population):
 
 \begin{align}
-P(G_{Mother}=CC|G_{Child}=CC,G_{Father}=CT) &= \frac{P(G_C=CC|G_M=CC,G_F=CT) * P(G_M=CC)}{ \sum_{X \in \{C,T\}} P(G_C=CC|G_M=XC,G_F=CT)} \\
-  &= \frac{.5 * .64}{ .5 * .64 + .25 * .32 + 0 * .04} \\
+P(G_{Mother}=CT|G_{Child}=CT,G_{Father}=CC) &= \frac{P(G_C=CT|G_M=CT,G_F=CC) * P(G_M=CT)}{ \sum_{X \in \{C,T\}} P(G_C=CT|G_M=XT,G_F=CC)} \\
+  &= \frac{.5 * .32}{ 0 * .64 + .5 * .32 + 1 * .04} \\
   &= .8
 \end{align}
 
 \begin{align}
-P(G_{Mother}=CT|G_{Child}=CC,G_{Father}=CT) &= \frac{P(G_C=CC|G_M=CT,G_F=CT) * P(G_M=CC)}{ \sum_{X \in \{C,T\}} P(G_C=CC|G_M=XC,G_F=CT)} \\
-  &= \frac{.25 * .16}{ .5 * .64 + .25 * .32 + 0 * .04} \\
+P(G_{Mother}=TT|G_{Child}=CT,G_{Father}=CC) &= \frac{P(G_C=CT|G_M=TT,G_F=CC) * P(G_M=TT)}{ \sum_{X \in \{C,T\}} P(G_C=CT|G_M=XT,G_F=CT)} \\
+  &= \frac{1 * .04}{ 0 * .64 + .5 * .32 + 1 * .04} \\
   &= .2
 \end{align}
 
@@ -209,21 +210,54 @@ Priors:
 
 \begin{align}
 P(G=CC) &= \sum_{G_M} P(G=CC|G_M) P(G_M) \\
-  &= P(G=CC|G_M=CC)P(G_M=CC) + P(G=CC|G_M=CT)P(G_M=CT)\\
-  &= .5 * .8 + .25 * .2 = .45
+  &= P(G=CC|G_M=CT)P(G_M=CT) + P(G=CC|G_M=TT)P(G_M=TT)\\
+  &= .5 * .8 + 0 * .2 = .4
 \end{align}
 
 \begin{align}
 P(G=CT) &= \sum_{G_M} P(G=CT|G_M) P(G_M) \\
-  &= P(G=CT|G_M=CC)P(G_M=CC) + P(G=CT|G_M=CT)P(G_M=CT)\\
-  &= .5 * .8 + .5 * .2 = .5
+  &= P(G=CT|G_M=CT)P(G_M=CT) + P(G=CT|G_M=TT)P(G_M=TT)\\
+  &= .5 * .8 + 1 * .2 = .6
 \end{align}
 
 \begin{align}
 P(G=TT) &= \sum_{G_M} P(G=TT|G_M) P(G_M) \\
-  &= P(G=TT|G_M=CC)P(G_M=CC) + P(G=TT|G_M=CT)P(G_M=CT)\\
-  &= 0 * .8 + .25 * .2 = .05
+  &= P(G=TT|G_M=CT)P(G_M=CT) + P(G=TT|G_M=TT)P(G_M=TT)\\
+  &= 0 * .8 + 0 * .2 = 0
 \end{align}
+
+The new priors are therefore:
+
+\begin{align}
+P(CC) &= .4 \\
+P(CT) &= .6 \\
+P(TT) &= 0
+\end{align}
+
+
+New posteriors:
+
+\begin{align}
+P(CC|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
+  &= \frac{8.852928\text{e-}{5} * .4}{8.852928\text{e-}{5} * .4 + 9.409\text{e-}{9} * 0 + 0.01384129 * .6} \\
+  &= 0.004245915
+\end{align}
+
+\begin{align}
+P(CT|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
+  &= \frac{0.01384129 * .5}{8.852928\text{e-}{5} * .4 + 9.409\text{e-}{9} * 0 + 0.01384129 * .6} \\
+  &= 0.995754085
+\end{align}
+
+\begin{align}
+P(TT|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
+  &= \frac{9.409\text{e-}{9} * 0}{8.852928\text{e-}{5} * .4 + 9.409\text{e-}{9} * 0 + 0.01384129 * .6} \\
+  &= 0
+\end{align}
+
+
+The new priors increase the posterior for the reads coming from an individual
+heterozygote CT.
 
 
 # Lab 7
