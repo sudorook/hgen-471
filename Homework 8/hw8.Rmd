@@ -21,22 +21,24 @@ On average, does he over- or under-estimate the extent of variation?*
 
 Structural variations between individuals, such as insertions, deletions, copy
 number variations, translocations, etc. will cause many pairwise differences
-that are in reality caused by a single variant. This will inflate the measure
-of variation.
+between individuals. Using a pairwise-difference metric for measuring genetic
+variation when structural variation is present will return inflated values
+because multiple differences will be attributed to a single mutational
+feature/event.
 
 If sample sizes are not large enough to capture rare variants and *de novo*
 mutations, then many of those variants will not appear within the dataset. This
 will deflate measures of genetic variation.
 
 If the individuals are not randomly sampled from the population, then
-relatedness between individuals could confound results. Related individuals are
-likely to share alleles, so even some common variants may not be detected. This
-will deflate genetic variation.
+relatedness among individuals could confound results. Related individuals are
+likely to share alleles, so even some common variants in the broader population
+may not be detected. This will deflate genetic variation.
 
 On balance, between-individual differences due to structural variation are
 greater than those attributable to single-nucleotide variants, so measures of
-genetic diversity that use pairwise base-pair comparisons between individuals
-will return inflated variance estimates.
+genetic diversity that use pairwise base-pair comparisons will overestimate
+genetic variation.
 
 
 ### (b)
@@ -48,7 +50,24 @@ For each variant, we assume we know the posterior probabilities of genotypes in
 each individual. (Hint: how did we address for genotype uncertainty in
 association test in the lecture about imputation?).*
 
+One can compensate for bias by using a linear model that relates the sequence
+calls from a particular sequencing platform and read depth to the known
+sequence posterior. (The posterior distribution for sequence calls is generated
+by a HMM for the sequence, multiplied over the number of reads.) Regress an
+estimate of the posterior probabilities of nucleotide calls, such as the mean
+posterior, against the known distribution at each locus to obtain a set of
+locus-specific correction factors. They can then be used as the coefficients to
+adjust likelihoods for unknown data. This strategy will require a regression to
+be performed at every locus, because the bias for a given sequence in the
+genome depends on many sequence specific factors, such as GC content, repeats,
+etc. This means that a regression model for a given sequence is likely unusable
+for a sequence from a different part of the genome.
 
+To generalize the linear model, one could pick out features that correspond to
+high regression coefficients (i.e. high deviation from the expected posterior).
+This could be done manually based on known molecular features of DNA or the
+sequencing technology, or it could be done in an automated manner by a machine
+learning algorithm.
 
 
 ## Problem 2
@@ -60,12 +79,6 @@ and two reads mapped to the allele T. The error rate is assumed to be $\epsilon
 ### (a)
 *Use the individual prior defined in the class and genotype likelihood, derive
 the posterior probabilities of the genotypes, CC, CT and TT.*
-
-Prior(non-reference heterozygote) $\sim 0.001 * 2/3$
-
-Prior(non-reference homozygote) $\sim 0.001 * 1/3$
-
-Prior(reference homozygote) $\sim 0.999$
 
 \begin{align}
 P(D_j |G) &= \frac{1}{2} [P(D_j|H_1) + P(D_j|H_2)] \\
@@ -85,7 +98,7 @@ The likelihood of a genotype is:
 \end{align}
 
 
-Likelihoods (reference=C):
+**Likelihoods (reference=C):**
 
 \begin{align}
 P(D|G=CC) &= (1-\epsilon)^4 (1-\frac{\epsilon}{3})^2 \\
@@ -107,7 +120,11 @@ P(D|G=TT) &= (1-\epsilon)^2 (1-\frac{\epsilon}{3})^4 \\
 \end{align}
 
 
-Priors:
+**Priors:**
+
+Prior(reference homozygote) $\sim 0.999$  
+Prior(non-reference heterozygote) $\sim 0.001 * 2/3$  
+Prior(non-reference homozygote) $\sim 0.001 * 1/3$  
 
 \begin{align}
 P(CC) &= .999 \\
@@ -116,24 +133,24 @@ P(TT) &= .000\bar{3}
 \end{align}
 
 
-Posteriors:
+**Posteriors:**
 
 \begin{align}
-P(CC|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
-  &= \frac{8.852928\text{e-}{5} * .999}{8.852928\text{e-}{5} * .999 + 9.409\text{e-}{9} * .000\bar{3} + 0.01384129 * .000\bar{6}} \\
-  &= 0.9052310925
+P(CC|D) &\propto P(D|G=CC)P(CC) \\
+  &= 8.852928\text{e-}{5} * .999 \\
+  &= 8.844075\text{e-}05
 \end{align}
 
 \begin{align}
-P(CT|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
-  &= \frac{0.01384129 * .000\bar{6}}{8.852928\text{e-}{5} * .999 + 9.409\text{e-}{9} * .000\bar{3} + 0.01384129 * .000\bar{6}} \\
-  &= 0.0944478896
+P(CT|D) &\propto P(D|G=CC)P(CC) \\
+  &= 0.01384129 * .000\bar{6} \\
+  &= 9.227525\text{e-}06
 \end{align}
 
 \begin{align}
-P(TT|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
-  &= \frac{9.409\text{e-}{9} * .000\bar{3}}{8.852928\text{e-}{5} * .999 + 9.409\text{e-}{9} * .000\bar{3} + 0.01384129 * .000\bar{6}} \\
-  &= 0.0003210179
+P(TT|D) &=\propto P(D|G=CC)P(CC)\\
+  &= 9.409\text{e-}{9} * .000\bar{3} \\
+  &= 3.136333\text{e-}12
 \end{align}
 
 The most likely genotype is still CC, the reference homozygote. This is due to
@@ -152,7 +169,7 @@ Assuming that no *de novo* mutations take place in the parental germplasm and
 that the parental genotypes are known with absolute certainty, the new priors
 and posteriors are as follows:
 
-New priors:
+**New priors:**
 
 \begin{align}
 P(CC) &= .5 \\
@@ -160,23 +177,23 @@ P(CT) &= .5 \\
 P(TT) &= 0
 \end{align}
 
-New posteriors:
+**New posteriors:**
 
 \begin{align}
-P(CC|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
-  &= \frac{8.852928\text{e-}{5} * .5}{8.852928\text{e-}{5} * .5 + 9.409\text{e-}{9} * 0 + 0.01384129 * .5} \\
-  &= 0.00635538
+P(CC|D) &\propto P(D|G=CC)P(CC) \\
+  &= 8.852928\text{e-}{5} * .5 \\
+  &= 4.426464\text{e-}05 
 \end{align}
 
 \begin{align}
-P(CT|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
-  &= \frac{0.01384129 * .5}{8.852928\text{e-}{5} * .5 + 9.409\text{e-}{9} * 0 + 0.01384129 * .5} \\
-  &= 0.99364462
+P(CT|D) &\propto P(D|G=CC)P(CC) \\
+  &= 0.01384129 * .5 \\
+  &= 0.006920644
 \end{align}
 
 \begin{align}
-P(TT|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
-  &= \frac{9.409\text{e-}{9} * 0}{8.852928\text{e-}{5} * .5 + 9.409\text{e-}{9} * 0 + 0.01384129 * .5} \\
+P(TT|D) &\propto P(D|G=CC)P(CC) \\
+  &= 9.409\text{e-}{9} * 0 \\
   &= 0
 \end{align}
 
@@ -197,18 +214,19 @@ genotype is as follows (assuming the mother's genotype is randomly sampled from
 the population):
 
 \begin{align}
-P(G_{Mother}=CT|G_{Child}=CT,G_{Father}=CC) &= \frac{P(G_C=CT|G_M=CT,G_F=CC) * P(G_M=CT)}{ \sum_{X \in \{C,T\}} P(G_C=CT|G_M=XT,G_F=CC)} \\
+P(G_{Mother}=CT|G_{Child}=CT,G_{Father}=CC) &= \frac{P(G_C=CT|G_M=CT,G_F=CC) * P(G_M=CT)}{ \sum_{X \in \{C,T\}} P(G_C=CT|G_M=XT,G_F=CC)P(G_M = XT)} \\
   &= \frac{.5 * .32}{ 0 * .64 + .5 * .32 + 1 * .04} \\
   &= .8
 \end{align}
 
 \begin{align}
-P(G_{Mother}=TT|G_{Child}=CT,G_{Father}=CC) &= \frac{P(G_C=CT|G_M=TT,G_F=CC) * P(G_M=TT)}{ \sum_{X \in \{C,T\}} P(G_C=CT|G_M=XT,G_F=CT)} \\
+P(G_{Mother}=TT|G_{Child}=CT,G_{Father}=CC) &= \frac{P(G_C=CT|G_M=TT,G_F=CC) * P(G_M=TT)}{ \sum_{X \in \{C,T\}} P(G_C=CT|G_M=XT,G_F=CT)P(G_M = XT)} \\
   &= \frac{1 * .04}{ 0 * .64 + .5 * .32 + 1 * .04} \\
   &= .2
 \end{align}
 
-Priors:
+
+**New Priors:**
 
 \begin{align}
 P(G=CC) &= \sum_{G_M} P(G=CC|G_M) P(G_M) \\
@@ -237,23 +255,23 @@ P(TT) &= 0
 \end{align}
 
 
-New posteriors:
+**New posteriors:**
 
 \begin{align}
-P(CC|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
-  &= \frac{8.852928\text{e-}{5} * .4}{8.852928\text{e-}{5} * .4 + 9.409\text{e-}{9} * 0 + 0.01384129 * .6} \\
-  &= 0.004245915
+P(CC|D) &\propto P(D|CC)P(CC) \\
+  &= 8.852928\text{e-}{5} * .4 \\
+  &= 3.541171\text{e-}05
 \end{align}
 
 \begin{align}
-P(CT|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
-  &= \frac{0.01384129 * .5}{8.852928\text{e-}{5} * .4 + 9.409\text{e-}{9} * 0 + 0.01384129 * .6} \\
-  &= 0.995754085
+P(CT|D) &\propto P(D|CT)P(CT) \\
+  &= 0.01384129 * .6 \\
+  &= 8.304772\text{e-}03
 \end{align}
 
 \begin{align}
-P(TT|D) &= \frac{P(D|G=CC)P(CC)}{\sum_G P(D|G)P(G)} \\
-  &= \frac{9.409\text{e-}{9} * 0}{8.852928\text{e-}{5} * .4 + 9.409\text{e-}{9} * 0 + 0.01384129 * .6} \\
+P(TT|D) &\propto P(D|TT)P(TT) \\
+  &= 9.409\text{e-}{9} * 0 \\
   &= 0
 \end{align}
 
@@ -267,7 +285,7 @@ heterozygote CT.
 ## Problem 1
 *How many mapped sequences do we have for this file?*
 
-There are 1000944-4=1000940 sequence reads.
+There are $1000944-4=1000940$ sequence reads.
 
 ## Problem 2
 Searching online, what are first 11 columns of the .sam file's alignment
