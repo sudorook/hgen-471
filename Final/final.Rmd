@@ -4,99 +4,235 @@ author: Ansel George
 output: pdf_document
 ---
 
+
+```{r,message=F}
+library(ggplot2)
+library(igraph)
+
+set.seed(10)
+```
+
 # Problem 1
 
-Consider a scenario in which genotypes are observed for pairs of siblings who
+*Consider a scenario in which genotypes are observed for pairs of siblings who
 are second cousins. Each pair of siblings will have long chromosomal segments
 that are inherited from their shared great grandparent (tracts that are
 identical by descent, IBD). Suppose we would like to design a Hidden Markov
-Model that could be used to infer the location of IBD tracts.
+Model that could be used to infer the location of IBD tracts.*
 
-a) Sketch the model, defining your hidden and observed random variables.
+a) **Sketch the model, defining your hidden and observed random variables.**
 
-b) Which algorithm would you use to identify the IBD segments?
+```{r}
+```
 
-c) If two markers are separated by 0.05 cM, how could that used to inform
-   transition probabilities in the model?
+Hidden variables:
 
-d) Extra-credit: Define the emission probabilities assuming known allele
-   frequencies, and assuming Hardy-Weinberg proportions.
+ * Z: state of sequence (pairs are IBD or not IBD)
+
+Observed variables:
+
+ * G: genotype sequence
+
+Other variables:
+
+ * E: emission probabilities for each state
+ * A: transition probabilities of moving from state to state
+
+
+b) **Which algorithm would you use to identify the IBD segments?**
+
+Viterbi
+
+
+c) **If two markers are separated by 0.05 cM, how could that used to inform
+   transition probabilities in the model?**
+
+The distribution for distance until a recombination events follows a geometric
+distribution with parameter $.05$. Therefore, the probability of moving from
+one state the next is $.05$ and the probability of staying is $1-.05=.95$.
+These can be used as the transition probability for moving from an IBD state to
+a non-IBD state.
+
+d) **Extra-credit: Define the emission probabilities assuming known allele
+   frequencies, and assuming Hardy-Weinberg proportions.**
+
+When comparing the genotypes $X$ of tracts that are IBD, where $X_i$ is the
+genotype of individual $i$ and $X_{i,k}$ is the genotype of individual $i$ and
+locus $k$.
+
+$P(X_{1,k}=X_{2,k}) = 1$
+
+$P(X_{1,k} \neq X_{2,k}) = 0$
+
+
+When comparing the genotypes $X$ of tracts that are not IBD, given alleles
+$a_{l}$ at locus $k$ with frequencies $p_{a_l}$,
+
+$P(X_{1,k}=X_{2,k}) = \sum_l p_{a_l}^2$
+
+$P(X_{1,k} \neq X_{2,k}) = 1 - P(X_1=X_2)$
 
 
 # Problem 2
 
-Researchers often study isolated populations, e.g. Icelandic people. Typically,
+*Researchers often study isolated populations, e.g. Icelandic people. Typically,
 a small founder population moved to a place, and then became isolated (limited
 genetic flow) from the larger world. In this problem, we will explore the use
 of isolated populations for studying human genetics. (Feel free to read
 published work using this type of study design, e.g. papers from deCODE
-Genetics.)
+Genetics.)*
 
-a) What are the main advantages of using isolated populations for studying
-   genetics of human diseases?
+a) **What are the main advantages of using isolated populations for studying
+   genetics of human diseases?**
 
-b) Imputation is particularly effective for isolated populations. Typically
+Reduced background genetic variation in isolated populations relative to global
+ones improve statistical power of tests looking for disease variant that have
+modest to small effect sizes.
+
+Larger relatedness of individuals increases the likelihood of encountering rare
+recessive variants, though doing a pedigree study instead would be even better
+for these type of variants.
+
+Isolated populations will have lower heterozygosity overall because of genetic
+drift.
+
+One caveat to finding disease variants in isolated populations is that the
+effect may be specific to the population and not replicate globally.
+
+
+b) **Imputation is particularly effective for isolated populations. Typically
    researchers sequence a small number of individuals and then use that as a
    reference panel to impute more samples. Explain why it is easier to impute
-   isolated populations.
+   isolated populations.**
 
-c) Unlike standard GWAS, the individuals of a population are not unrelated. How
-   would you perform association analysis of a SNP? (5 points)
+Imputations are more error-prone the greater the number of variants are present
+in the population, which arise due to mutation and recombination between
+admixed individuals. When individuals are all from an isolated population,
+overall variation is lower, and there are fewer combinations of variants that
+recombination can generate. This makes imputation easier.
 
-d) Suppose we study the heritability of a complex trait. Do you expect
+
+c) **Unlike standard GWAS, the individuals of a population are not unrelated. How
+   would you perform association analysis of a SNP?**
+
+One would need to correct for genetic relatedness, reduced heterozygosity, etc.
+A crude method of doing so is to use genomic control or LOD score regression.
+This method could substantially reduce power, though.
+
+Another that will capture more variants and explain a greater proportion of
+heritability of a trait is to use GCTA to compute the pairwise relatedness of
+each individual and drop those with high genetic correlation. By doing so, the
+SNPs can be considered to be independent of one another.
+
+
+d) **Suppose we study the heritability of a complex trait. Do you expect
    heritability from isolated populations to be higher or lower or the same,
-   comparing with studies using unrelated subjects?
+   comparing with studies using unrelated subjects?**
+
+Heritability will be higher due to 1. shared environment (climate, diet, etc.)
+reducing phenotypic and environmental variability relative to a population
+sampled globally and 2. a greater proportion of shared common variants that
+drive phenotypic variability.
 
 
 # Problem 3
 
-A researcher hypothesizes that longevity is influenced by genetics, and is
+*A researcher hypothesizes that longevity is influenced by genetics, and is
 writing a proposal to perform a genome-wide association study of longevity. In
 addition, s/he has access to a number of publicly available datasets such as
-ENCODE, GTEx and results from model organism studies of longevity (e.g.
+ENCODE, GTEx, and results from model organism studies of longevity (e.g.
 knockout of certain genes extends the lifespan of a model species). You will
-help the research to develop the proposal, which should address the following
-questions:
+help the researcher to develop the proposal, which should address the following
+questions:*
 
-a) A simple definition of phenotype would be the life-span of an individual.
+a) **A simple definition of phenotype would be the life-span of an individual.
    But the challenge is that it is generally unknown until the person dies, at
    which point it is difficult to perform any studies. Propose a study design
-   that overcomes this problem.
+   that overcomes this problem.**
 
-b) Unlike many other phenotypes, the primary tissue types related to longevity
+Impute the genotypes of dead parents or grandparents whose lifespans are known
+by using the genotypes of their descendants and other relatives. Then, use the
+imputed data to test for variants that associate with longevity.
+
+Alternatively, if you live in a country with lax ethical standards and poorly
+guarded graveyards, one could dig up corpses and genotype them, obviating the
+need for imputations.
+
+
+b) **Unlike many other phenotypes, the primary tissue types related to longevity
    are not well-defined. Propose a strategy to address this question using the
-   results from GWAS and additional resources.
+   results from GWAS and additional resources.**
 
-c) How will you prioritize or follow up with the loci you find to be associated
+One can combine samples across tissue types and look for significant variants.
+This will drastically reduce power, though.
+
+Alternatively, one could run a stratified LD score regression based on
+functional categories of tissue types. The regression will yield per-tissue
+enrichment scores for the heritability of a trait given a SNP. Large enrichment
+with respect the heritability of longevity variation would indicate that the
+tissue type is important for the longevity phenotype.
+
+
+c) **How will you prioritize or follow up with the loci you find to be associated
    with longevity? You can propose any computational and experimental analysis,
-   as long as it is practical.
+   as long as it is practical.**
 
-d) In the case that the study is underpowered, you may not find many loci. What
-   strategies can you use to boost the power?
+Experimental: Look for model organisms where the associated genes or regulatory
+sequences are present. Then, run knock-out studies to see whether the effect
+predicted by GWAS is recapitulated.
 
-e) One question about longevity is whether some people live very long because
+Computational: Combine data from other studies into meta-analyses that focus on
+the effects sizes of the significant variants found in the initial study and
+check whether or not they are replicated.
+
+
+d) **In the case that the study is underpowered, you may not find many loci. What
+   strategies can you use to boost the power?**
+
+One can use Bayesian approaches for significance testing, such as false
+discovery rate FDR, to boost power at the risk of reducing sensitivity.
+
+
+e) **One question about longevity is whether some people live very long because
    they have fewer disease variants or they have some extra protective
-   variants. Propose some idea to compare the two hypotheses.
+   variants. Propose some idea to compare the two hypotheses.**
+
+Genotypes for disease variants will, under an additive model of genetic
+variance, have negative effect sizes relative to the longevity phenotype, and
+protective variants with be positively associated. With a sufficiently powerful
+study or meta-analysis of studies, one can ascertain the sign of the effect
+sizes of particular variants.
+
+Whether the variants are indeed protective or disease-inducing can be
+ascertained by experiments in model organisms or by studying existing
+annotations and regulatory pathways that point to some mechanism for their
+effects on longevity.
 
 
 # Problem 4
 
-In this problem, we explore the importance of considering the power when
+*In this problem, we explore the importance of considering the power when
 comparing findings across multiple studies. As discussed in the class, cis-eQTL
 of different tissues are often shared. Suppose in the first tissue, we found
 $n$ eQTL above our significance threshold, $p < \lambda$. In the second tissue,
-$k$ out of these $n$ eQTL are statistically significant at $p < \lambda$.
+$k$ out of these $n$ eQTL are statistically significant at $p < \lambda$.*
 
-a) Can we say that the true proportion of cis-eQTL that are shared with the
-   second tissue is $k/n$? If not, why?
+a) **Can we say that the true proportion of cis-eQTL that are shared with the
+   second tissue is $k/n$? If not, why?**
 
-b) Assume we know that the power in the eQTL study of the second tissue is
+No, there could be more variation in expression in one tissue that reduces the
+power of statistical tests specifically for that particular tissue.
+
+
+b) **Assume we know that the power in the eQTL study of the second tissue is
    $\beta$, at $p$- value threshold $\lambda$. Use these numbers to estimate
    how often a cis-eQTL in the first tissue is also an eQTL in the second
    tissue (Hint: some of the $n$ SNPs found in the first tissue are true eQTL
    in the second tissue, other are not. For each of these two sets of SNPs,
    what is the probability that a SNP has $p$-value below $\lambda$ in the
-   second tissue?).
+   second tissue?).**
+
+
 
 
 # Problem 5
@@ -110,16 +246,16 @@ create an account). Write a report on your findings with the sections (one
 paragraph each) listed below using this as a guide:
 \url{http://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1005619}.
 
-a) Abstract
+a) **Abstract**
 
-b) Introduction: Explain why you picked this phenotype and why it may be
-   important.
+b) **Introduction: Explain why you picked this phenotype and why it may be
+   important.**
 
-c) Results: Include plots from the genome-wide plots tab from FUMA with your
+c) **Results: Include plots from the genome-wide plots tab from FUMA with your
    interpretation. Gene set analysis may sometimes provide you with interesting
-   stories to tell.
+   stories to tell.**
 
-d) Run S-PrediXcan (https://github.com/hakyimlab/MetaXcan) using your favorite tissue to
-   find gene level associations and discuss the results.
+d) **Run S-PrediXcan (https://github.com/hakyimlab/MetaXcan) using your favorite tissue to
+   find gene level associations and discuss the results.**
 
-e) Discussion
+e) **Discussion**
