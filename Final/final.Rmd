@@ -232,7 +232,9 @@ b) **Assume we know that the power in the eQTL study of the second tissue is
    what is the probability that a SNP has $p$-value below $\lambda$ in the
    second tissue?).**
 
-
+If the eQTL is true in the second tissue, then the probability of it being
+detected by the study is $\beta$ - the statistical power. If not, then it will
+be called incorrectly as an eQTL with probability $\lambda$.
 
 
 # Problem 5
