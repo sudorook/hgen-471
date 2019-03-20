@@ -1,6 +1,26 @@
 #! /bin/bash
 set -eu
 
+# # Sleep duration
+# 
+# wget https://www.dropbox.com/s/00v10oxwku3u5yq/1160.assoc.tsv.gz
+# gunzip -d 1160.assoc.tsv.gz
+# ./process.R 1160.assoc.tsv
+# gzip new_1160.assoc.tsv
+
+
+# # Handedness (chirality/laterality): Left-handed
+# # Handedness (chirality/laterality): Use both right and left hands equally
+# 
+# wget -nc https://www.dropbox.com/s/nmlqmrsl9l66qas/1707_2.assoc.tsv.gz
+# wget -nc https://www.dropbox.com/s/uwpewpzevn9vba6/1707_3.assoc.tsv.gz
+# gunzip -d 1707_2.assoc.tsv.gz
+# gunzip -d 1707_3.assoc.tsv.gz
+# ./process.R 1707_2.assoc.tsv
+# ./process.R 1707_3.assoc.tsv
+# gzip new_1707_2.assoc.tsv
+# gzip new_1707_3.assoc.tsv
+
 
 # #
 # # 1920	Mood swings
